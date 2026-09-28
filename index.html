@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-14">
+  <link rel="stylesheet" href="styles.css?v=20260928-15">
 </head>
 <body>
   <div class="app-shell">
@@ -70,10 +70,38 @@
         </section>
 
         <section class="view" id="eventsView">
-          <div class="section-toolbar">
+          <div class="section-toolbar events-toolbar">
             <div><span class="eyebrow">CAMPAIGN REGISTER</span><h2>All festival events</h2></div>
             <button class="button primary open-event">＋ New event</button>
           </div>
+
+          <div class="event-year-tabs" id="eventYearTabs" aria-label="Filter events by year"></div>
+
+          <div class="event-filter-row">
+            <div class="event-filter-controls">
+              <label>Festival
+                <select id="eventFestivalFilter">
+                  <option value="all">All Festivals</option>
+                  <option value="CNY">CNY</option>
+                  <option value="Hari Raya">Hari Raya</option>
+                  <option value="Mid-Autumn">Mid-Autumn</option>
+                  <option value="Diwali">Diwali</option>
+                  <option value="Christmas">Christmas</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Status
+                <select id="eventStatusFilter">
+                  <option value="all">All Statuses</option>
+                  <option value="Planned">Planned</option>
+                  <option value="Active">Active</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </label>
+            </div>
+            <span class="event-filter-count" id="eventFilterCount"></span>
+          </div>
+
           <div class="event-grid" id="eventGrid"></div>
         </section>
 
@@ -241,7 +269,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20260928-14"></script>
-  <!-- deployment-sync-20260928-14 -->
+  <script src="app.js?v=20260928-15"></script>
+  <!-- deployment-sync-20260928-15 -->
 </body>
 </html>

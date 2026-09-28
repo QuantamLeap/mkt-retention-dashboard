@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-3">
+  <link rel="stylesheet" href="styles.css?v=20260928-4">
 </head>
 <body>
   <div class="app-shell">
@@ -15,6 +15,7 @@
         <button class="nav-item active" data-view="overview"><span class="nav-icon">⌂</span>Overview</button>
         <button class="nav-item" data-view="events"><span class="nav-icon">◇</span>Events</button>
         <button class="nav-item" data-view="rewards"><span class="nav-icon">◎</span>Player rewards</button>
+        <button class="nav-item" data-view="payouts"><span class="nav-icon">$</span>Payouts</button>
       </nav>
       <div class="sidebar-note">
         <span class="status-dot"></span>
@@ -47,7 +48,7 @@
           <div class="dashboard-grid">
             <section class="panel cost-panel">
               <div class="panel-header">
-                <div><span class="eyebrow">SPEND BY EVENT</span><h2>Campaign cost</h2></div>
+                <div><span class="eyebrow">ACTUAL PAYOUT BY EVENT</span><h2>Campaign payout</h2></div>
                 <span class="panel-meta" id="averageCost"></span>
               </div>
               <div class="bar-chart" id="costChart"></div>
@@ -64,7 +65,7 @@
               <div><span class="eyebrow">ACTIVE & RECENT</span><h2>Festival events</h2></div>
               <button class="text-button" data-go-view="events">View all →</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Event</th><th>Period</th><th>Recipients</th><th>Budget</th><th>Cost</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Event</th><th>Period</th><th>Recipients</th><th>Budget</th><th>Rewards</th><th>Paid Out</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
           </section>
         </section>
 
@@ -89,6 +90,23 @@
           <section class="panel table-panel records-panel">
             <div class="table-wrap"><table><thead><tr><th>Player</th><th>Event</th><th>Reward</th><th>Value</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="rewardTable"></tbody></table></div>
             <div class="table-footer" id="recordCount"></div>
+          </section>
+        </section>
+
+        <section class="view" id="payoutsView">
+          <div class="section-toolbar">
+            <div><span class="eyebrow">CAMPAIGN FINANCE</span><h2>Payout ledger</h2></div>
+            <button class="button primary open-payout">＋ Record payout</button>
+          </div>
+          <div class="payout-summary" id="payoutSummary"></div>
+          <div class="filters payout-filters">
+            <label class="search-field"><span>⌕</span><input id="payoutSearchInput" type="search" placeholder="Search player/batch or reference"></label>
+            <select id="payoutEventFilter" aria-label="Filter payout by campaign"><option value="all">All campaigns</option></select>
+            <select id="payoutStatusFilter" aria-label="Filter payout by status"><option value="all">All statuses</option><option>Paid</option><option>Pending</option><option>Cancelled</option></select>
+          </div>
+          <section class="panel table-panel records-panel">
+            <div class="table-wrap"><table><thead><tr><th>Date</th><th>Campaign</th><th>Player / Batch</th><th>Amount</th><th>Reference</th><th>Status</th><th>Recorded By</th><th></th></tr></thead><tbody id="payoutTable"></tbody></table></div>
+            <div class="table-footer" id="payoutRecordCount"></div>
           </section>
         </section>
       </div>
@@ -130,8 +148,27 @@
     </form>
   </dialog>
 
+  <dialog id="payoutDialog">
+    <form method="dialog" id="payoutForm">
+      <div class="dialog-header"><div><span class="eyebrow">CAMPAIGN PAYOUT</span><h2>Record payout</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
+      <div class="form-grid">
+        <label class="full">Campaign<select name="eventId" id="payoutEventSelect" required></select></label>
+        <label>Payout date<input name="date" type="date" required></label>
+        <label>Payout type<select name="type" required><option>Free Credit</option><option>Cash</option><option>Cashback</option><option>Rebate</option><option>Physical Gift</option><option>Other</option></select></label>
+        <label>Amount (USD)<input name="amount" type="number" min="0" step="0.01" required placeholder="500"></label>
+        <label>Quantity<input name="quantity" type="number" min="1" step="1" value="1"></label>
+        <label class="full">Player / Batch<input name="playerBatch" placeholder="e.g. PL-1028 or VIP Batch A"></label>
+        <label>Reference<input name="reference" placeholder="Transaction / promo / batch ID"></label>
+        <label>Status<select name="status"><option>Paid</option><option>Pending</option><option>Cancelled</option></select></label>
+        <label class="full">Recorded by<input name="recordedBy" placeholder="Staff name"></label>
+        <label class="full">Notes<textarea name="notes" rows="3" placeholder="Optional remarks"></textarea></label>
+      </div>
+      <div class="dialog-actions"><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save payout</button></div>
+    </form>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260928-3"></script>
-  <!-- deployment-sync-20260928-3 -->
+  <script src="app.js?v=20260928-4"></script>
+  <!-- deployment-sync-20260928-4 -->
 </body>
 </html>

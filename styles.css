@@ -57,7 +57,7 @@ h1 { font-size: 22px; } h2 { font-size: 17px; }
 .period-row strong { display: block; margin-top: 3px; font-size: 14px; }
 .eyebrow { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: 1.2px; }
 
-.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
 .metric-card, .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 .metric-card { padding: 18px; min-height: 124px; position: relative; overflow: hidden; }
 .metric-card::after { content: ""; position: absolute; right: 0; top: 0; width: 4px; height: 100%; background: var(--tone, var(--accent)); }

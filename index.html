@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-4">
+  <link rel="stylesheet" href="styles.css?v=20260928-5">
 </head>
 <body>
   <div class="app-shell">
@@ -95,8 +95,8 @@
 
         <section class="view" id="payoutsView">
           <div class="section-toolbar">
-            <div><span class="eyebrow">CAMPAIGN FINANCE</span><h2>Payout ledger</h2></div>
-            <button class="button primary open-payout">＋ Record payout</button>
+            <div><span class="eyebrow">CAMPAIGN FINANCE</span><h2>Payout ledger</h2><p class="section-note">Every issued reward is automatically recorded here as Paid. Use Additional payout only for costs not created through Issue Reward.</p></div>
+            <button class="button primary open-payout">＋ Additional payout</button>
           </div>
           <div class="payout-summary" id="payoutSummary"></div>
           <div class="filters payout-filters">
@@ -150,7 +150,7 @@
 
   <dialog id="payoutDialog">
     <form method="dialog" id="payoutForm">
-      <div class="dialog-header"><div><span class="eyebrow">CAMPAIGN PAYOUT</span><h2>Record payout</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
+      <div class="dialog-header"><div><span class="eyebrow">CAMPAIGN PAYOUT</span><h2>Additional payout</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
       <div class="form-grid">
         <label class="full">Campaign<select name="eventId" id="payoutEventSelect" required></select></label>
         <label>Payout date<input name="date" type="date" required></label>
@@ -163,12 +163,12 @@
         <label class="full">Recorded by<input name="recordedBy" placeholder="Staff name"></label>
         <label class="full">Notes<textarea name="notes" rows="3" placeholder="Optional remarks"></textarea></label>
       </div>
-      <div class="dialog-actions"><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save payout</button></div>
+      <div class="dialog-actions"><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save additional payout</button></div>
     </form>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260928-4"></script>
-  <!-- deployment-sync-20260928-4 -->
+  <script src="app.js?v=20260928-5"></script>
+  <!-- deployment-sync-20260928-5 -->
 </body>
 </html>

@@ -352,7 +352,6 @@ function normalizeBulkDate(value) {
 }
 
 function validateBulkRows(rawRows) {
-  const seen = new Set();
   return rawRows.map((row, index) => {
     const playerId = String(bulkCell(row, ["Player ID", "PlayerID", "Username"]) || "").trim();
     const type = normalizeRewardType(bulkCell(row, ["Reward Type", "Type"]));
@@ -369,10 +368,6 @@ function validateBulkRows(rawRows) {
     if (!Number.isFinite(unitCost) || unitCost < 0) errors.push("Unit Cost must be 0 or more");
     if (!date) errors.push("Invalid Date Issued");
     if (!status) errors.push("Invalid Status");
-
-    const duplicateKey = [playerId, type, description, quantity, unitCost, date].join("|").toLowerCase();
-    if (seen.has(duplicateKey)) errors.push("Duplicate row in file");
-    seen.add(duplicateKey);
 
     return {
       rowNumber: index + 2,

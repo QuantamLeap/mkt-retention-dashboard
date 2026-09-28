@@ -23,6 +23,8 @@ const seedData = {
 
 let state = loadState();
 let editingEventId = null;
+let bulkImportRows = [];
+let bulkImportFileName = "";
 
 const money = new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR", currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -66,7 +68,7 @@ function rewardPayoutRecord(reward) {
     amount: rewardCost(reward),
     quantity: Number(reward.quantity) || 1,
     playerBatch: reward.playerId,
-    reference: reward.description || "Issued reward",
+    reference: reward.reference || reward.description || "Issued reward",
     status: "Paid",
     recordedBy: "Issue Reward",
     notes: "Automatically recorded as paid out when the reward was issued.",
@@ -180,6 +182,7 @@ function renderSelects() {
 
   document.querySelector("#rewardEventSelect").innerHTML = options;
   document.querySelector("#payoutEventSelect").innerHTML = options;
+  document.querySelector("#bulkRewardEventSelect").innerHTML = options;
 }
 
 function renderRewards() {
@@ -246,6 +249,217 @@ function renderPayouts() {
   }).join("") || `<tr><td colspan="8" class="empty-state">No payout records match these filters.</td></tr>`;
 
   document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${payoutRecords.length} payout records`;
+}
+
+
+function normalizeBulkHeader(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[()]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function bulkCell(row, aliases) {
+  const normalized = {};
+  Object.entries(row).forEach(([key, value]) => { normalized[normalizeBulkHeader(key)] = value; });
+  for (const alias of aliases) {
+    const key = normalizeBulkHeader(alias);
+    if (Object.prototype.hasOwnProperty.call(normalized, key)) return normalized[key];
+  }
+  return "";
+}
+
+function normalizeRewardType(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (["credit", "free credit", "free credits", "bonus credit", "bonus credits"].includes(text)) return "Credit";
+  if (["physical", "physical gift", "physical gifts", "gift"].includes(text)) return "Physical";
+  return "";
+}
+
+function normalizeRewardStatus(value) {
+  const text = String(value || "Issued").trim().toLowerCase();
+  if (text === "issued") return "Issued";
+  if (text === "pending") return "Pending";
+  if (text === "delivered") return "Delivered";
+  return "";
+}
+
+function normalizeBulkDate(value) {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
+  const text = String(value).trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return text;
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  return "";
+}
+
+function validateBulkRows(rawRows) {
+  const seen = new Set();
+  return rawRows.map((row, index) => {
+    const playerId = String(bulkCell(row, ["Player ID", "PlayerID", "Username"]) || "").trim();
+    const type = normalizeRewardType(bulkCell(row, ["Reward Type", "Type"]));
+    const description = String(bulkCell(row, ["Reward Description", "Description"]) || "").trim();
+    const quantity = Number(bulkCell(row, ["Quantity", "Qty"]));
+    const unitCost = Number(bulkCell(row, ["Unit Cost RM", "Unit Cost (RM)", "Unit Cost", "Amount RM", "Amount"]));
+    const date = normalizeBulkDate(bulkCell(row, ["Date Issued", "Issue Date", "Date"]));
+    const status = normalizeRewardStatus(bulkCell(row, ["Status", "Fulfilment", "Fulfillment"]));
+    const reference = String(bulkCell(row, ["Reference / Batch ID", "Reference", "Batch ID", "Batch"]) || "").trim();
+
+    const errors = [];
+    if (!playerId) errors.push("Missing Player ID");
+    if (!type) errors.push("Invalid Reward Type");
+    if (!description) errors.push("Missing Reward Description");
+    if (!Number.isInteger(quantity) || quantity < 1) errors.push("Quantity must be 1 or more");
+    if (!Number.isFinite(unitCost) || unitCost < 0) errors.push("Unit Cost must be 0 or more");
+    if (!date) errors.push("Invalid Date Issued");
+    if (!status) errors.push("Invalid Status");
+
+    const duplicateKey = [playerId, type, description, quantity, unitCost, date, reference].join("|").toLowerCase();
+    if (seen.has(duplicateKey)) errors.push("Duplicate row in file");
+    seen.add(duplicateKey);
+
+    return {
+      rowNumber: index + 2,
+      playerId,
+      type,
+      description,
+      quantity,
+      unitCost,
+      date,
+      status: status || "Issued",
+      reference,
+      errors
+    };
+  });
+}
+
+function renderBulkPreview() {
+  const summary = document.querySelector("#bulkImportSummary");
+  const table = document.querySelector("#bulkPreviewTable");
+  const confirmButton = document.querySelector("#confirmBulkImportButton");
+  const fileLabel = document.querySelector("#bulkFileName");
+
+  const validRows = bulkImportRows.filter(row => row.errors.length === 0);
+  const invalidRows = bulkImportRows.filter(row => row.errors.length > 0);
+
+  fileLabel.textContent = bulkImportFileName || "No file selected";
+  summary.innerHTML = bulkImportRows.length
+    ? `<strong>${bulkImportRows.length} rows detected</strong><span>${validRows.length} ready to import · ${invalidRows.length} with errors</span>`
+    : `<strong>No data loaded</strong><span>Upload the completed Excel or CSV template to preview it here.</span>`;
+
+  table.innerHTML = bulkImportRows.slice(0, 100).map(row => `
+    <tr class="${row.errors.length ? "bulk-row-error" : ""}">
+      <td>${row.rowNumber}</td>
+      <td><strong>${escapeHtml(row.playerId || "—")}</strong></td>
+      <td>${escapeHtml(row.type || "—")}</td>
+      <td>${escapeHtml(row.description || "—")}</td>
+      <td>${Number.isFinite(row.quantity) ? row.quantity : "—"}</td>
+      <td>${Number.isFinite(row.unitCost) ? money.format(row.unitCost) : "—"}</td>
+      <td>${row.date ? formatDate(row.date) : "—"}</td>
+      <td><span class="badge ${row.errors.length ? "cancelled" : "issued"}">${row.errors.length ? escapeHtml(row.errors.join("; ")) : "Ready"}</span></td>
+    </tr>`).join("") || `<tr><td colspan="8" class="empty-state">Upload a file to preview reward records.</td></tr>`;
+
+  confirmButton.disabled = validRows.length === 0;
+  confirmButton.textContent = validRows.length ? `Import ${validRows.length} valid row${validRows.length === 1 ? "" : "s"}` : "Import valid rows";
+}
+
+function openBulkRewardDialog() {
+  if (!state.events.length) { showToast("Create a campaign before importing rewards"); return; }
+  bulkImportRows = [];
+  bulkImportFileName = "";
+  const form = document.querySelector("#bulkRewardForm");
+  form.reset();
+  renderSelects();
+  document.querySelector("#bulkRewardEventSelect").value = state.events[0]?.id || "";
+  renderBulkPreview();
+  openDialog(document.querySelector("#bulkRewardDialog"));
+}
+
+async function loadBulkRewardFile(file) {
+  if (!file) return;
+  if (!window.XLSX) {
+    showToast("Excel importer is still loading. Please try again.");
+    return;
+  }
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array", cellDates: true });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) throw new Error("No worksheet found");
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: "",
+      raw: false,
+      dateNF: "yyyy-mm-dd"
+    });
+    bulkImportRows = validateBulkRows(rows);
+    bulkImportFileName = file.name;
+    renderBulkPreview();
+  } catch (error) {
+    bulkImportRows = [];
+    bulkImportFileName = "";
+    renderBulkPreview();
+    showToast("Could not read this file. Please use the template.");
+  }
+}
+
+function downloadBulkRewardTemplate() {
+  if (!window.XLSX) {
+    showToast("Excel template generator is still loading. Please try again.");
+    return;
+  }
+  const rows = [
+    ["Player ID", "Reward Type", "Reward Description", "Quantity", "Unit Cost (RM)", "Date Issued", "Status", "Reference / Batch ID"],
+    ["PL-1028", "Free Credit", "Festival bonus credits", 1, 50, today(), "Issued", "BATCH-001"]
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  sheet["!cols"] = [
+    { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 10 },
+    { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 22 }
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Reward Upload");
+  XLSX.writeFile(workbook, "bulk-reward-upload-template.xlsx");
+  showToast("Excel template downloaded");
+}
+
+function confirmBulkImport() {
+  const eventId = document.querySelector("#bulkRewardEventSelect").value;
+  const campaign = eventById(eventId);
+  if (!campaign) { showToast("Select a campaign"); return; }
+
+  const defaultReference = document.querySelector("#bulkDefaultReference").value.trim();
+  const validRows = bulkImportRows.filter(row => row.errors.length === 0);
+  if (!validRows.length) { showToast("There are no valid rows to import"); return; }
+
+  const importStamp = Date.now();
+  const rewards = validRows.map((row, index) => ({
+    id: `reward-bulk-${importStamp}-${index}`,
+    playerId: row.playerId,
+    eventId,
+    type: row.type,
+    description: row.description,
+    quantity: row.quantity,
+    unitCost: row.unitCost,
+    date: row.date,
+    status: row.status,
+    reference: row.reference || defaultReference,
+    importBatch: defaultReference || bulkImportFileName
+  }));
+
+  state.rewards.push(...rewards);
+  saveState();
+  document.querySelector("#bulkRewardDialog").close();
+  render();
+  showToast(`${rewards.length} rewards imported and recorded as paid out`);
 }
 
 function setView(view) {
@@ -345,6 +559,9 @@ document.addEventListener("click", event => {
 
   if (event.target.closest("#openPayoutButton, .open-payout")) openPayoutDialog();
 
+  if (event.target.closest("#openBulkRewardButton, .open-bulk-reward")) openBulkRewardDialog();
+  if (event.target.closest("#downloadBulkTemplateButton")) downloadBulkRewardTemplate();
+
   if (event.target.closest("#openRewardButton, .open-reward")) {
     document.querySelector("#rewardForm [name=date]").value = today();
     updateCostPreview();
@@ -373,6 +590,9 @@ document.addEventListener("click", event => {
 document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
 ["searchInput", "eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "searchInput" ? "input" : "change", renderRewards));
 ["payoutSearchInput", "payoutEventFilter", "payoutStatusFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "payoutSearchInput" ? "input" : "change", renderPayouts));
+
+document.querySelector("#bulkRewardFile").addEventListener("change", event => loadBulkRewardFile(event.target.files?.[0]));
+document.querySelector("#confirmBulkImportButton").addEventListener("click", confirmBulkImport);
 
 document.querySelector("#eventForm").addEventListener("submit", event => {
   event.preventDefault();

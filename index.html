@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-9">
+  <link rel="stylesheet" href="styles.css?v=20260928-10">
 </head>
 <body>
   <div class="app-shell">
@@ -165,8 +165,7 @@
       </div>
 
       <div class="form-grid bulk-form-grid">
-        <label>Campaign<select name="eventId" id="bulkRewardEventSelect" required></select></label>
-        <label>Default batch / reference<input id="bulkDefaultReference" name="defaultReference" placeholder="e.g. MID-AUTUMN-0928"></label>
+        <label class="full">Campaign<select name="eventId" id="bulkRewardEventSelect" required></select></label>
         <label class="full file-upload-label">Reward file
           <input id="bulkRewardFile" type="file" accept=".xlsx,.xls,.csv" required>
           <span class="field-help">Accepted: .xlsx, .xls, .csv · Use the template columns exactly for the smoothest import.</span>
@@ -175,7 +174,7 @@
 
       <div class="bulk-template-columns">
         <span>Template columns:</span>
-        <code>Player ID</code><code>Reward Type</code><code>Reward Description</code><code>Quantity</code><code>Unit Cost (RM)</code><code>Date Issued</code><code>Status</code><code>Reference / Batch ID</code>
+        <code>Player ID</code><code>Reward Type</code><code>Reward Description</code><code>Quantity</code><code>Unit Cost (RM)</code><code>Date Issued</code><code>Status</code>
       </div>
 
       <div class="bulk-preview-header">
@@ -219,7 +218,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20260928-9"></script>
-  <!-- deployment-sync-20260928-9 -->
+  <script src="app.js?v=20260928-10"></script>
+  <!-- deployment-sync-20260928-10 -->
 </body>
 </html>

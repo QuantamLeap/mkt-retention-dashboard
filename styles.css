@@ -183,3 +183,28 @@ dialog form { padding: 24px; }.dialog-header { display: flex; justify-content: s
   .clear-record-option { min-height: auto; }
   .clear-record-stats { margin-top: 16px; }
 }
+
+.event-year-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 12px; }
+.year-tab { min-height: 34px; padding: 0 13px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--muted); font-size: 11px; font-weight: 700; }
+.year-tab:hover { border-color: #b6bbb6; color: var(--ink); }
+.year-tab.active { border-color: var(--ink); background: var(--ink); color: white; }
+.event-filter-row { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 14px; }
+.event-filter-controls { display: flex; gap: 8px; }
+.event-filter-controls label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.event-filter-controls select { min-width: 170px; height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--ink); outline: none; }
+.event-filter-controls select:focus { border-color: var(--accent); }
+.event-filter-count { padding-bottom: 9px; color: var(--muted); font-size: 10px; }
+.event-empty-state { grid-column: 1 / -1; display: grid; place-items: center; min-height: 180px; padding: 30px; border: 1px dashed #cfd1cb; border-radius: var(--radius); color: var(--muted); text-align: center; background: #fafaf7; }
+.event-empty-state strong { color: var(--ink); font: 700 14px Manrope, sans-serif; }
+.event-empty-state span { margin-top: -58px; font-size: 11px; }
+@media (max-width: 760px) {
+  .event-filter-row { align-items: stretch; flex-direction: column; }
+  .event-filter-controls { width: 100%; }
+  .event-filter-controls label { flex: 1; }
+  .event-filter-controls select { width: 100%; min-width: 0; }
+  .event-filter-count { padding-bottom: 0; }
+}
+@media (max-width: 520px) {
+  .event-filter-controls { flex-direction: column; }
+  .year-tab { flex: 1 0 auto; }
+}

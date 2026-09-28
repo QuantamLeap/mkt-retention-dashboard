@@ -24,7 +24,7 @@ const seedData = {
 let state = loadState();
 let editingEventId = null;
 
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR", currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
 function loadState() {
@@ -93,7 +93,7 @@ function renderMetrics() {
   const active = state.events.filter(event => event.status === "Active").length;
   const metrics = [
     ["Rewards issued", money.format(rewardValue), `${state.rewards.length} reward records`, "+", "#d54d3f"],
-    ["Actual payout", money.format(paid), `${state.rewards.length + state.payouts.filter(p => p.status === "Paid").length} paid records`, "$", "#28755a"],
+    ["Actual payout", money.format(paid), `${state.rewards.length + state.payouts.filter(p => p.status === "Paid").length} paid records`, "RM", "#28755a"],
     ["Unique recipients", recipients.toLocaleString(), "Across all festival events", "◎", "#3d6781"],
     ["Events tracked", state.events.length, `${active} currently active`, "◇", "#a56c19"]
   ];
@@ -433,7 +433,7 @@ document.querySelector("#payoutForm").addEventListener("submit", event => {
 });
 
 document.querySelector("#exportButton").addEventListener("click", () => {
-  const headers = ["Record Type", "Player ID / Batch", "Event", "Type", "Description / Reference", "Quantity", "Amount", "Date", "Status", "Recorded By"];
+  const headers = ["Record Type", "Player ID / Batch", "Event", "Type", "Description / Reference", "Quantity", "Amount (RM)", "Date", "Status", "Recorded By"];
   const rewardRows = state.rewards.map(reward => [
     "Reward / Paid out", reward.playerId, eventById(reward.eventId)?.name || "", reward.type, reward.description,
     reward.quantity, rewardCost(reward), reward.date, reward.status, ""

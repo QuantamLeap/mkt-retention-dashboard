@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-11">
+  <link rel="stylesheet" href="styles.css?v=20260928-12">
 </head>
 <body>
   <div class="app-shell">
@@ -81,6 +81,7 @@
           <div class="section-toolbar rewards-toolbar">
             <div><span class="eyebrow">PLAYER LEDGER</span><h2>Reward records</h2></div>
             <div class="toolbar-actions">
+              <button class="button secondary danger-outline" id="openClearRecordsButton">Clear records</button>
               <button class="button secondary open-bulk-reward" id="openBulkRewardButton">⇧ Bulk issue reward</button>
               <button class="button primary open-reward">＋ Issue reward</button>
             </div>
@@ -147,6 +148,49 @@
   </dialog>
 
 
+
+  <dialog id="clearRecordsDialog" class="clear-records-dialog">
+    <div class="dialog-shell">
+      <div class="dialog-header">
+        <div><span class="eyebrow">REWARD RECORDS</span><h2>Clear reward records</h2></div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="clear-records-intro">Deleting reward records also removes their corresponding Paid Out value from campaign totals.</p>
+
+      <div class="clear-record-options">
+        <section class="clear-record-option">
+          <div>
+            <span class="eyebrow">CURRENT VIEW</span>
+            <h3>Delete filtered records</h3>
+            <p>Uses the current Player ID search, Event filter, and Reward Type filter.</p>
+          </div>
+          <div class="clear-record-stats">
+            <strong id="clearFilteredCount">0</strong>
+            <span>records · <b id="clearFilteredValue">RM0</b></span>
+          </div>
+          <button class="button danger" id="deleteFilteredRewardsButton" type="button">Delete filtered records</button>
+        </section>
+
+        <section class="clear-record-option destructive">
+          <div>
+            <span class="eyebrow">ENTIRE LEDGER</span>
+            <h3>Delete all reward records</h3>
+            <p>Removes every reward entry across every campaign.</p>
+          </div>
+          <div class="clear-record-stats">
+            <strong id="clearAllCount">0</strong>
+            <span>records · <b id="clearAllValue">RM0</b></span>
+          </div>
+          <button class="button danger" id="deleteAllRewardsButton" type="button">Delete all records</button>
+        </section>
+      </div>
+
+      <div class="dialog-actions">
+        <button class="button secondary close-dialog" type="button">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="bulkRewardDialog" class="bulk-dialog">
     <form method="dialog" id="bulkRewardForm">
       <div class="dialog-header">
@@ -197,7 +241,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20260928-11"></script>
-  <!-- deployment-sync-20260928-11 -->
+  <script src="app.js?v=20260928-12"></script>
+  <!-- deployment-sync-20260928-12 -->
 </body>
 </html>

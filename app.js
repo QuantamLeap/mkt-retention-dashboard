@@ -21,6 +21,7 @@ const seedData = {
 };
 
 let state = loadState();
+let editingEventId = null;
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -91,7 +92,7 @@ function renderOverviewEvents() { document.querySelector("#overviewEvents").inne
 function renderEventGrid() {
   document.querySelector("#eventGrid").innerHTML = state.events.map(event => {
     const cost = eventCost(event.id); const used = event.budget ? Math.round(cost / event.budget * 100) : 0;
-    return `<article class="event-card"><div class="event-card-top"><div class="festival-mark">${escapeHtml(event.festival.slice(0, 3).toUpperCase())}</div><span class="badge ${event.status.toLowerCase()}">${event.status}</span></div><h3>${escapeHtml(event.name)}</h3><p>${formatDate(event.startDate)} – ${formatDate(event.endDate)}</p><div class="event-stats"><div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div><div class="event-stat"><span>Total cost</span><strong>${money.format(cost)}</strong></div></div><div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(used, 100)}%"></div></div><div class="budget-text"><span>${used}% used</span><span>${money.format(event.budget)} budget</span></div></article>`;
+    return `<article class="event-card"><div class="event-card-top"><div class="festival-mark">${escapeHtml(event.festival.slice(0, 3).toUpperCase())}</div><div class="event-card-actions"><span class="badge ${event.status.toLowerCase()}">${event.status}</span><button class="event-edit-button" type="button" data-edit-event="${escapeHtml(event.id)}" aria-label="Edit ${escapeHtml(event.name)}">Edit</button></div></div><h3>${escapeHtml(event.name)}</h3><p>${formatDate(event.startDate)} – ${formatDate(event.endDate)}</p><div class="event-stats"><div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div><div class="event-stat"><span>Total cost</span><strong>${money.format(cost)}</strong></div></div><div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(used, 100)}%"></div></div><div class="budget-text"><span>${used}% used</span><span>${money.format(event.budget)} budget</span></div></article>`;
   }).join("") || `<p class="empty-state">Create your first event to get started.</p>`;
 }
 
@@ -130,10 +131,64 @@ function showToast(message) { const toast = document.querySelector("#toast"); to
 function openDialog(dialog) { dialog.showModal(); }
 function today() { return new Date().toISOString().slice(0, 10); }
 
+function setEventDialogMode(mode) {
+  const isEditing = mode === "edit";
+  document.querySelector("#eventDialogEyebrow").textContent = isEditing ? "EDIT CAMPAIGN" : "NEW CAMPAIGN";
+  document.querySelector("#eventDialogTitle").textContent = isEditing ? "Edit festival event" : "Create festival event";
+  document.querySelector("#eventSubmitButton").textContent = isEditing ? "Save changes" : "Create event";
+  document.querySelector("#deleteEventButton").classList.toggle("hidden", !isEditing);
+}
+
+function openCreateEventDialog() {
+  editingEventId = null;
+  document.querySelector("#eventForm").reset();
+  setEventDialogMode("create");
+  openDialog(document.querySelector("#eventDialog"));
+}
+
+function openEditEventDialog(id) {
+  const campaign = eventById(id);
+  if (!campaign) { showToast("Campaign could not be found"); return; }
+
+  editingEventId = id;
+  const form = document.querySelector("#eventForm");
+  form.elements.name.value = campaign.name;
+  form.elements.festival.value = campaign.festival;
+  form.elements.status.value = campaign.status;
+  form.elements.startDate.value = campaign.startDate;
+  form.elements.endDate.value = campaign.endDate;
+  form.elements.budget.value = campaign.budget;
+  setEventDialogMode("edit");
+  openDialog(document.querySelector("#eventDialog"));
+}
+
+function deleteEditingEvent() {
+  if (!editingEventId) return;
+  const campaign = eventById(editingEventId);
+  if (!campaign) { showToast("Campaign could not be found"); return; }
+
+  const attachedRewards = state.rewards.filter(reward => reward.eventId === editingEventId);
+  const rewardText = attachedRewards.length === 1 ? "reward record" : "reward records";
+  const message = attachedRewards.length
+    ? `Delete "${campaign.name}"? This campaign has ${attachedRewards.length} attached ${rewardText}. Deleting the campaign will also permanently delete ${attachedRewards.length === 1 ? "that record" : "those records"}. This cannot be undone.`
+    : `Delete "${campaign.name}"? This cannot be undone.`;
+
+  if (!confirm(message)) return;
+
+  const deletedEventId = editingEventId;
+  state.events = state.events.filter(event => event.id !== deletedEventId);
+  state.rewards = state.rewards.filter(reward => reward.eventId !== deletedEventId);
+  saveState();
+  document.querySelector("#eventDialog").close();
+  render();
+  showToast(attachedRewards.length ? `Campaign and ${attachedRewards.length} ${rewardText} deleted` : "Campaign deleted");
+}
+
 document.addEventListener("click", event => {
   const nav = event.target.closest("[data-view]"); if (nav) setView(nav.dataset.view);
   const go = event.target.closest("[data-go-view]"); if (go) setView(go.dataset.goView);
-  if (event.target.closest("#openEventButton, .open-event")) openDialog(document.querySelector("#eventDialog"));
+  if (event.target.closest("#openEventButton, .open-event")) openCreateEventDialog();
+  const editEventButton = event.target.closest("[data-edit-event]"); if (editEventButton) openEditEventDialog(editEventButton.dataset.editEvent);
   if (event.target.closest("#openRewardButton, .open-reward")) { document.querySelector("#rewardForm [name=date]").value = today(); updateCostPreview(); openDialog(document.querySelector("#rewardDialog")); }
   if (event.target.closest(".close-dialog")) event.target.closest("dialog").close();
   const deleteButton = event.target.closest("[data-delete]");
@@ -146,8 +201,31 @@ document.querySelector("#menuButton").addEventListener("click", () => document.q
 document.querySelector("#eventForm").addEventListener("submit", event => {
   event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
   if (values.endDate < values.startDate) { showToast("End date must be after start date"); return; }
-  state.events.unshift({ ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) }); saveState(); event.currentTarget.reset(); document.querySelector("#eventDialog").close(); render(); showToast("Festival event created");
+
+  if (editingEventId) {
+    const index = state.events.findIndex(campaign => campaign.id === editingEventId);
+    if (index === -1) { showToast("Campaign could not be found"); return; }
+    state.events[index] = { ...state.events[index], ...values, budget: Number(values.budget) };
+    saveState();
+    document.querySelector("#eventDialog").close();
+    render();
+    showToast("Campaign updated");
+    return;
+  }
+
+  state.events.unshift({ ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) });
+  saveState();
+  document.querySelector("#eventDialog").close();
+  render();
+  showToast("Festival event created");
 });
+
+document.querySelector("#eventDialog").addEventListener("close", () => {
+  editingEventId = null;
+  document.querySelector("#eventForm").reset();
+  setEventDialogMode("create");
+});
+document.querySelector("#deleteEventButton").addEventListener("click", deleteEditingEvent);
 
 function updateCostPreview() { const form = document.querySelector("#rewardForm"); document.querySelector("#costPreview").textContent = money.format(Number(form.elements.quantity.value || 0) * Number(form.elements.unitCost.value || 0)); }
 document.querySelector("#rewardForm").addEventListener("input", updateCostPreview);

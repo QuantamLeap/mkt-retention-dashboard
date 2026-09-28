@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-8">
+  <link rel="stylesheet" href="styles.css?v=20260928-9">
 </head>
 <body>
   <div class="app-shell">
@@ -80,7 +80,10 @@
         <section class="view" id="rewardsView">
           <div class="section-toolbar rewards-toolbar">
             <div><span class="eyebrow">PLAYER LEDGER</span><h2>Reward records</h2></div>
-            <button class="button primary open-reward">＋ Issue reward</button>
+            <div class="toolbar-actions">
+              <button class="button secondary open-bulk-reward" id="openBulkRewardButton">⇧ Bulk issue reward</button>
+              <button class="button primary open-reward">＋ Issue reward</button>
+            </div>
           </div>
           <div class="filters">
             <label class="search-field"><span>⌕</span><input id="searchInput" type="search" placeholder="Search player ID"></label>
@@ -145,6 +148,56 @@
     </form>
   </dialog>
 
+
+  <dialog id="bulkRewardDialog" class="bulk-dialog">
+    <form method="dialog" id="bulkRewardForm">
+      <div class="dialog-header">
+        <div><span class="eyebrow">BULK REWARD IMPORT</span><h2>Issue rewards from Excel</h2></div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close">×</button>
+      </div>
+
+      <div class="bulk-intro">
+        <div>
+          <strong>1. Choose campaign</strong>
+          <span>The selected campaign will be applied to every valid row in the file.</span>
+        </div>
+        <button class="button secondary" id="downloadBulkTemplateButton" type="button">⇩ Download Excel template</button>
+      </div>
+
+      <div class="form-grid bulk-form-grid">
+        <label>Campaign<select name="eventId" id="bulkRewardEventSelect" required></select></label>
+        <label>Default batch / reference<input id="bulkDefaultReference" name="defaultReference" placeholder="e.g. MID-AUTUMN-0928"></label>
+        <label class="full file-upload-label">Reward file
+          <input id="bulkRewardFile" type="file" accept=".xlsx,.xls,.csv" required>
+          <span class="field-help">Accepted: .xlsx, .xls, .csv · Use the template columns exactly for the smoothest import.</span>
+        </label>
+      </div>
+
+      <div class="bulk-template-columns">
+        <span>Template columns:</span>
+        <code>Player ID</code><code>Reward Type</code><code>Reward Description</code><code>Quantity</code><code>Unit Cost (RM)</code><code>Date Issued</code><code>Status</code><code>Reference / Batch ID</code>
+      </div>
+
+      <div class="bulk-preview-header">
+        <div id="bulkImportSummary"><strong>No data loaded</strong><span>Upload the completed Excel or CSV template to preview it here.</span></div>
+        <span id="bulkFileName">No file selected</span>
+      </div>
+
+      <div class="table-wrap bulk-preview-wrap">
+        <table>
+          <thead><tr><th>Row</th><th>Player ID</th><th>Type</th><th>Description</th><th>Qty</th><th>Unit Cost</th><th>Date</th><th>Validation</th></tr></thead>
+          <tbody id="bulkPreviewTable"><tr><td colspan="8" class="empty-state">Upload a file to preview reward records.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="bulk-import-note">Rows with validation errors will be skipped. Every successfully imported reward is automatically recorded as Paid Out.</div>
+      <div class="dialog-actions">
+        <button class="button secondary close-dialog" type="button">Cancel</button>
+        <button class="button primary" id="confirmBulkImportButton" type="button" disabled>Import valid rows</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="payoutDialog">
     <form method="dialog" id="payoutForm">
       <div class="dialog-header"><div><span class="eyebrow">CAMPAIGN PAYOUT</span><h2>Additional payout</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
@@ -165,7 +218,8 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260928-8"></script>
-  <!-- deployment-sync-20260928-8 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js?v=20260928-9"></script>
+  <!-- deployment-sync-20260928-9 -->
 </body>
 </html>

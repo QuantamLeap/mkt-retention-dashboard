@@ -87,6 +87,14 @@ td { padding: 13px 18px; border-top: 1px solid #ecece7; white-space: nowrap; } t
 .badge.active, .badge.issued, .badge.delivered { background: var(--green-soft); color: var(--green); }
 .badge.planned, .badge.pending { background: var(--amber-soft); color: var(--amber); }
 
+.hidden { display: none !important; }
+.button.danger { color: #9a3f37; border-color: #e5c5c1; background: #fff8f7; }
+.button.danger:hover { color: white; border-color: #9a3f37; background: #9a3f37; }
+#deleteEventButton { margin-right: auto; }
+.event-card-actions { display: flex; align-items: center; gap: 7px; }
+.event-edit-button { min-height: 28px; padding: 0 9px; border: 1px solid var(--line); border-radius: 4px; background: white; color: var(--muted); font-size: 10px; font-weight: 700; }
+.event-edit-button:hover { border-color: var(--accent); color: var(--accent); background: #fff8f7; }
+
 .event-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .event-card { padding: 18px; background: white; border: 1px solid var(--line); border-radius: var(--radius); }
 .event-card-top { display: flex; justify-content: space-between; gap: 12px; }.festival-mark { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 5px; display: grid; place-items: center; color: var(--accent); font: 800 12px Manrope; }

@@ -23,6 +23,7 @@ const seedData = {
 
 let state = loadState();
 let editingEventId = null;
+let selectedEventYear = null;
 let bulkImportRows = [];
 let bulkImportFileName = "";
 
@@ -82,6 +83,17 @@ function formatDate(value) { return value ? dateFormat.format(new Date(`${value}
 function initials(name) { return String(name || "?").split(" ").map(part => part[0]).slice(0, 2).join("").toUpperCase(); }
 function escapeHtml(value) { const element = document.createElement("div"); element.textContent = String(value ?? ""); return element.innerHTML; }
 function today() { return new Date().toISOString().slice(0, 10); }
+function eventYear(event) { return String(event.festivalDate || "").slice(0, 4); }
+function availableEventYears() {
+  return [...new Set(state.events.map(eventYear).filter(Boolean))].sort((a, b) => Number(b) - Number(a));
+}
+function ensureSelectedEventYear() {
+  const years = availableEventYears();
+  if (!years.length) { selectedEventYear = "all"; return; }
+  if (selectedEventYear === "all" || years.includes(String(selectedEventYear))) return;
+  const currentYear = String(new Date().getFullYear());
+  selectedEventYear = years.includes(currentYear) ? currentYear : years[0];
+}
 
 function render() {
   renderMetrics();
@@ -136,7 +148,27 @@ function renderOverviewEvents() {
 }
 
 function renderEventGrid() {
-  document.querySelector("#eventGrid").innerHTML = state.events.map(event => {
+  ensureSelectedEventYear();
+
+  const years = availableEventYears();
+  const yearTabs = document.querySelector("#eventYearTabs");
+  yearTabs.innerHTML = [
+    ...years.map(year => `<button type="button" class="year-tab ${String(selectedEventYear) === year ? "active" : ""}" data-event-year="${year}">${year}</button>`),
+    `<button type="button" class="year-tab ${selectedEventYear === "all" ? "active" : ""}" data-event-year="all">All Years</button>`
+  ].join("");
+
+  const festival = document.querySelector("#eventFestivalFilter").value;
+  const status = document.querySelector("#eventStatusFilter").value;
+
+  const filteredEvents = state.events
+    .filter(event => selectedEventYear === "all" || eventYear(event) === String(selectedEventYear))
+    .filter(event => festival === "all" || event.festival === festival)
+    .filter(event => status === "all" || event.status === status)
+    .sort((a, b) => String(a.festivalDate || "").localeCompare(String(b.festivalDate || "")));
+
+  document.querySelector("#eventFilterCount").textContent = `Showing ${filteredEvents.length} of ${state.events.length} events`;
+
+  document.querySelector("#eventGrid").innerHTML = filteredEvents.map(event => {
     const paid = eventPaidPayout(event.id);
     const remaining = Number(event.budget) - paid;
     const used = event.budget ? Math.round(paid / Number(event.budget) * 100) : 0;
@@ -157,7 +189,7 @@ function renderEventGrid() {
       <div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(Math.max(used, 0), 100)}%"></div></div>
       <div class="budget-text"><span>${used}% paid</span><span>${money.format(remaining)} remaining</span></div>
     </article>`;
-  }).join("") || `<p class="empty-state">Create your first event to get started.</p>`;
+  }).join("") || `<div class="event-empty-state"><strong>No events found</strong><span>Try another year, festival, or status filter.</span></div>`;
 }
 
 function renderSelects() {
@@ -579,6 +611,12 @@ document.addEventListener("click", event => {
   const editEventButton = event.target.closest("[data-edit-event]");
   if (editEventButton) openEditEventDialog(editEventButton.dataset.editEvent);
 
+  const yearButton = event.target.closest("[data-event-year]");
+  if (yearButton) {
+    selectedEventYear = yearButton.dataset.eventYear;
+    renderEventGrid();
+  }
+
   if (event.target.closest("#openBulkRewardButton, .open-bulk-reward")) openBulkRewardDialog();
   if (event.target.closest("#downloadBulkTemplateButton")) downloadBulkRewardTemplate();
   if (event.target.closest("#openClearRecordsButton")) openClearRecordsDialog();
@@ -603,6 +641,7 @@ document.addEventListener("click", event => {
 
 document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
 ["searchInput", "eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "searchInput" ? "input" : "change", renderRewards));
+["eventFestivalFilter", "eventStatusFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener("change", renderEventGrid));
 ["payoutSearchInput", "payoutEventFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "payoutSearchInput" ? "input" : "change", renderPayouts));
 
 document.querySelector("#bulkRewardFile").addEventListener("change", event => loadBulkRewardFile(event.target.files?.[0]));
@@ -618,6 +657,7 @@ document.querySelector("#eventForm").addEventListener("submit", event => {
     const index = state.events.findIndex(campaign => campaign.id === editingEventId);
     if (index === -1) { showToast("Campaign could not be found"); return; }
     state.events[index] = { ...state.events[index], ...values, budget: Number(values.budget) };
+    selectedEventYear = eventYear(state.events[index]) || selectedEventYear;
     saveState();
     document.querySelector("#eventDialog").close();
     render();
@@ -625,7 +665,9 @@ document.querySelector("#eventForm").addEventListener("submit", event => {
     return;
   }
 
-  state.events.unshift({ ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) });
+  const newEvent = { ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) };
+  state.events.unshift(newEvent);
+  selectedEventYear = eventYear(newEvent) || selectedEventYear;
   saveState();
   document.querySelector("#eventDialog").close();
   render();

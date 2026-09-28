@@ -311,8 +311,6 @@ function validateBulkRows(rawRows) {
     const unitCost = Number(bulkCell(row, ["Unit Cost RM", "Unit Cost (RM)", "Unit Cost", "Amount RM", "Amount"]));
     const date = normalizeBulkDate(bulkCell(row, ["Date Issued", "Issue Date", "Date"]));
     const status = normalizeRewardStatus(bulkCell(row, ["Status", "Fulfilment", "Fulfillment"]));
-    const reference = String(bulkCell(row, ["Reference / Batch ID", "Reference", "Batch ID", "Batch"]) || "").trim();
-
     const errors = [];
     if (!playerId) errors.push("Missing Player ID");
     if (!type) errors.push("Invalid Reward Type");
@@ -322,7 +320,7 @@ function validateBulkRows(rawRows) {
     if (!date) errors.push("Invalid Date Issued");
     if (!status) errors.push("Invalid Status");
 
-    const duplicateKey = [playerId, type, description, quantity, unitCost, date, reference].join("|").toLowerCase();
+    const duplicateKey = [playerId, type, description, quantity, unitCost, date].join("|").toLowerCase();
     if (seen.has(duplicateKey)) errors.push("Duplicate row in file");
     seen.add(duplicateKey);
 
@@ -335,7 +333,6 @@ function validateBulkRows(rawRows) {
       unitCost,
       date,
       status: status || "Issued",
-      reference,
       errors
     };
   });
@@ -417,13 +414,13 @@ function downloadBulkRewardTemplate() {
     return;
   }
   const rows = [
-    ["Player ID", "Reward Type", "Reward Description", "Quantity", "Unit Cost (RM)", "Date Issued", "Status", "Reference / Batch ID"],
-    ["PL-1028", "Free Credit", "Festival bonus credits", 1, 50, today(), "Issued", "BATCH-001"]
+    ["Player ID", "Reward Type", "Reward Description", "Quantity", "Unit Cost (RM)", "Date Issued", "Status"],
+    ["PL-1028", "Free Credit", "Festival bonus credits", 1, 50, today(), "Issued"]
   ];
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   sheet["!cols"] = [
     { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 10 },
-    { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 22 }
+    { wch: 16 }, { wch: 14 }, { wch: 14 }
   ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Reward Upload");
@@ -436,7 +433,6 @@ function confirmBulkImport() {
   const campaign = eventById(eventId);
   if (!campaign) { showToast("Select a campaign"); return; }
 
-  const defaultReference = document.querySelector("#bulkDefaultReference").value.trim();
   const validRows = bulkImportRows.filter(row => row.errors.length === 0);
   if (!validRows.length) { showToast("There are no valid rows to import"); return; }
 
@@ -451,8 +447,7 @@ function confirmBulkImport() {
     unitCost: row.unitCost,
     date: row.date,
     status: row.status,
-    reference: row.reference || defaultReference,
-    importBatch: defaultReference || bulkImportFileName
+    importBatch: bulkImportFileName
   }));
 
   state.rewards.push(...rewards);

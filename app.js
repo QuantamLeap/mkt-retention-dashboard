@@ -181,14 +181,19 @@ function renderSelects() {
   document.querySelector("#bulkRewardEventSelect").innerHTML = options;
 }
 
-function renderRewards() {
+function getFilteredRewards() {
   const search = document.querySelector("#searchInput").value.toLowerCase();
   const eventId = document.querySelector("#eventFilter").value;
   const type = document.querySelector("#typeFilter").value;
-  const filtered = state.rewards.filter(reward => {
+
+  return state.rewards.filter(reward => {
     const playerMatch = String(reward.playerId || "").toLowerCase().includes(search);
     return playerMatch && (eventId === "all" || reward.eventId === eventId) && (type === "all" || reward.type === type);
   }).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function renderRewards() {
+  const filtered = getFilteredRewards();
 
   document.querySelector("#rewardTable").innerHTML = filtered.map(reward => {
     const event = eventById(reward.eventId);
@@ -202,7 +207,62 @@ function renderRewards() {
       <td><button class="delete-button" data-delete-reward="${reward.id}" aria-label="Delete reward" title="Delete reward">×</button></td>
     </tr>`;
   }).join("") || `<tr><td colspan="7" class="empty-state">No reward records match these filters.</td></tr>`;
+
   document.querySelector("#recordCount").textContent = `Showing ${filtered.length} of ${state.rewards.length} reward records`;
+}
+
+function updateClearRecordsDialog() {
+  const filtered = getFilteredRewards();
+  const filteredValue = filtered.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const totalValue = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+
+  document.querySelector("#clearFilteredCount").textContent = filtered.length.toLocaleString();
+  document.querySelector("#clearFilteredValue").textContent = money.format(filteredValue);
+  document.querySelector("#clearAllCount").textContent = state.rewards.length.toLocaleString();
+  document.querySelector("#clearAllValue").textContent = money.format(totalValue);
+
+  document.querySelector("#deleteFilteredRewardsButton").disabled = filtered.length === 0;
+  document.querySelector("#deleteAllRewardsButton").disabled = state.rewards.length === 0;
+}
+
+function openClearRecordsDialog() {
+  updateClearRecordsDialog();
+  openDialog(document.querySelector("#clearRecordsDialog"));
+}
+
+function deleteFilteredRewards() {
+  const filtered = getFilteredRewards();
+  if (!filtered.length) { showToast("No filtered reward records to delete"); return; }
+
+  const value = filtered.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const eventId = document.querySelector("#eventFilter").value;
+  const eventName = eventId === "all" ? "the current filtered view" : (eventById(eventId)?.name || "the selected campaign");
+  const message = `Delete ${filtered.length} reward record${filtered.length === 1 ? "" : "s"} from ${eventName}? This will also remove ${money.format(value)} from Paid Out. This cannot be undone.`;
+
+  if (!confirm(message)) return;
+
+  const ids = new Set(filtered.map(reward => reward.id));
+  state.rewards = state.rewards.filter(reward => !ids.has(reward.id));
+  saveState();
+  document.querySelector("#clearRecordsDialog").close();
+  render();
+  showToast(`${filtered.length} reward record${filtered.length === 1 ? "" : "s"} deleted`);
+}
+
+function deleteAllRewards() {
+  if (!state.rewards.length) { showToast("There are no reward records to delete"); return; }
+
+  const count = state.rewards.length;
+  const value = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const message = `Delete all ${count} reward records? This will also remove ${money.format(value)} from Paid Out across all campaigns. This cannot be undone.`;
+
+  if (!confirm(message)) return;
+
+  state.rewards = [];
+  saveState();
+  document.querySelector("#clearRecordsDialog").close();
+  render();
+  showToast("All reward records deleted");
 }
 
 function renderPayouts() {
@@ -530,6 +590,7 @@ document.addEventListener("click", event => {
 
   if (event.target.closest("#openBulkRewardButton, .open-bulk-reward")) openBulkRewardDialog();
   if (event.target.closest("#downloadBulkTemplateButton")) downloadBulkRewardTemplate();
+  if (event.target.closest("#openClearRecordsButton")) openClearRecordsDialog();
 
   if (event.target.closest("#openRewardButton, .open-reward")) {
     document.querySelector("#rewardForm [name=date]").value = today();
@@ -555,6 +616,8 @@ document.querySelector("#menuButton").addEventListener("click", () => document.q
 
 document.querySelector("#bulkRewardFile").addEventListener("change", event => loadBulkRewardFile(event.target.files?.[0]));
 document.querySelector("#confirmBulkImportButton").addEventListener("click", confirmBulkImport);
+document.querySelector("#deleteFilteredRewardsButton").addEventListener("click", deleteFilteredRewards);
+document.querySelector("#deleteAllRewardsButton").addEventListener("click", deleteAllRewards);
 
 document.querySelector("#eventForm").addEventListener("submit", event => {
   event.preventDefault();

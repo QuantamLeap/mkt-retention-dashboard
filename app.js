@@ -57,7 +57,7 @@ function rewardPayoutRecord(reward) {
     type: reward.type === "Credit" ? "Free Credit" : "Physical Gift",
     amount: rewardCost(reward),
     quantity: Number(reward.quantity) || 1,
-    playerBatch: `${reward.playerId} · ${reward.playerName}`,
+    playerBatch: reward.playerId,
     reference: reward.description || "Issued reward",
     status: "Paid",
     recordedBy: "Issue Reward",
@@ -179,14 +179,14 @@ function renderRewards() {
   const eventId = document.querySelector("#eventFilter").value;
   const type = document.querySelector("#typeFilter").value;
   const filtered = state.rewards.filter(reward => {
-    const playerMatch = `${reward.playerId} ${reward.playerName}`.toLowerCase().includes(search);
+    const playerMatch = String(reward.playerId || "").toLowerCase().includes(search);
     return playerMatch && (eventId === "all" || reward.eventId === eventId) && (type === "all" || reward.type === type);
   }).sort((a, b) => b.date.localeCompare(a.date));
 
   document.querySelector("#rewardTable").innerHTML = filtered.map(reward => {
     const event = eventById(reward.eventId);
     return `<tr>
-      <td><div class="player-cell"><span class="avatar">${initials(reward.playerName)}</span><div><strong>${escapeHtml(reward.playerName)}</strong><small>${escapeHtml(reward.playerId)} · ${escapeHtml(reward.tier)}</small></div></div></td>
+      <td><div class="player-cell"><span class="avatar">ID</span><div><strong>${escapeHtml(reward.playerId)}</strong></div></div></td>
       <td>${event ? escapeHtml(event.name) : "Unknown"}</td>
       <td><strong>${escapeHtml(reward.description)}</strong><small>${reward.type === "Credit" ? "Free credit" : "Physical gift"} · Qty ${reward.quantity}</small></td>
       <td><strong>${money.format(rewardCost(reward))}</strong><small>${money.format(reward.unitCost)} each</small></td>
@@ -433,13 +433,13 @@ document.querySelector("#payoutForm").addEventListener("submit", event => {
 });
 
 document.querySelector("#exportButton").addEventListener("click", () => {
-  const headers = ["Record Type", "Player / Batch", "Player ID", "Event", "Type", "Description / Reference", "Quantity", "Amount", "Date", "Status", "Recorded By"];
+  const headers = ["Record Type", "Player ID / Batch", "Event", "Type", "Description / Reference", "Quantity", "Amount", "Date", "Status", "Recorded By"];
   const rewardRows = state.rewards.map(reward => [
-    "Reward / Paid out", reward.playerName, reward.playerId, eventById(reward.eventId)?.name || "", reward.type, reward.description,
+    "Reward / Paid out", reward.playerId, eventById(reward.eventId)?.name || "", reward.type, reward.description,
     reward.quantity, rewardCost(reward), reward.date, reward.status, ""
   ]);
   const payoutRows = state.payouts.map(payout => [
-    "Payout", payout.playerBatch || "", "", eventById(payout.eventId)?.name || "", payout.type, payout.reference || "",
+    "Payout", payout.playerBatch || "", eventById(payout.eventId)?.name || "", payout.type, payout.reference || "",
     payout.quantity || 1, payout.amount, payout.date, payout.status, payout.recordedBy || ""
   ]);
   const csv = [headers, ...rewardRows, ...payoutRows].map(row => row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");

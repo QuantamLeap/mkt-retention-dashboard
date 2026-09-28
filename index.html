@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-6">
+  <link rel="stylesheet" href="styles.css?v=20260928-7">
 </head>
 <body>
   <div class="app-shell">
@@ -122,7 +122,7 @@
         <label>Status<select name="status"><option>Planned</option><option>Active</option><option>Completed</option></select></label>
         <label>Start date<input name="startDate" type="date" required></label>
         <label>End date<input name="endDate" type="date" required></label>
-        <label class="full">Budget (USD)<input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
+        <label class="full">Budget (RM)<input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
       </div>
       <div class="dialog-actions"><button class="button danger hidden" id="deleteEventButton" type="button">Delete event</button><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" id="eventSubmitButton" type="submit">Create event</button></div>
     </form>
@@ -137,11 +137,11 @@
         <label>Reward type<select name="type" id="rewardType"><option value="Credit">Free credit</option><option value="Physical">Physical gift</option></select></label>
         <label>Reward description<input name="description" required value="Bonus credits"></label>
         <label>Quantity<input name="quantity" type="number" min="1" step="1" value="1" required></label>
-        <label>Unit cost (USD)<input name="unitCost" type="number" min="0" step="0.01" required placeholder="50"></label>
+        <label>Unit cost (RM)<input name="unitCost" type="number" min="0" step="0.01" required placeholder="50"></label>
         <label>Date issued<input name="date" type="date" required></label>
         <label>Fulfilment<select name="status"><option>Issued</option><option>Pending</option><option>Delivered</option></select></label>
       </div>
-      <div class="cost-preview"><span>Calculated cost</span><strong id="costPreview">$0.00</strong></div>
+      <div class="cost-preview"><span>Calculated cost</span><strong id="costPreview">RM0</strong></div>
       <div class="dialog-actions"><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save reward</button></div>
     </form>
   </dialog>
@@ -153,7 +153,7 @@
         <label class="full">Campaign<select name="eventId" id="payoutEventSelect" required></select></label>
         <label>Payout date<input name="date" type="date" required></label>
         <label>Payout type<select name="type" required><option>Free Credit</option><option>Cash</option><option>Cashback</option><option>Rebate</option><option>Physical Gift</option><option>Other</option></select></label>
-        <label>Amount (USD)<input name="amount" type="number" min="0" step="0.01" required placeholder="500"></label>
+        <label>Amount (RM)<input name="amount" type="number" min="0" step="0.01" required placeholder="500"></label>
         <label>Quantity<input name="quantity" type="number" min="1" step="1" value="1"></label>
         <label class="full">Player / Batch<input name="playerBatch" placeholder="e.g. PL-1028 or VIP Batch A"></label>
         <label>Reference<input name="reference" placeholder="Transaction / promo / batch ID"></label>
@@ -166,7 +166,7 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260928-6"></script>
-  <!-- deployment-sync-20260928-6 -->
+  <script src="app.js?v=20260928-7"></script>
+  <!-- deployment-sync-20260928-7 -->
 </body>
 </html>

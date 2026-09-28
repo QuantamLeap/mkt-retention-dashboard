@@ -177,8 +177,6 @@ function renderEventGrid() {
 
   document.querySelector("#eventGrid").innerHTML = filteredEvents.map(event => {
     const paid = eventPaidPayout(event.id);
-    const remaining = Number(event.budget) - paid;
-    const used = event.budget ? Math.round(paid / Number(event.budget) * 100) : 0;
     return `<article class="event-card">
       <div class="event-card-top">
         <div class="festival-mark">${escapeHtml(event.festival.slice(0, 3).toUpperCase())}</div>
@@ -194,8 +192,6 @@ function renderEventGrid() {
         <div class="event-stat"><span>Budget</span><strong>${money.format(Number(event.budget) || 0)}</strong></div>
         <div class="event-stat"><span>Paid out</span><strong>${money.format(paid)}</strong></div>
       </div>
-      <div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(Math.max(used, 0), 100)}%"></div></div>
-      <div class="budget-text"><span>${used}% paid</span><span>${money.format(remaining)} remaining</span></div>
     </article>`;
   }).join("") || `<div class="event-empty-state"><strong>No events found</strong><span>Try another year, festival, or status filter.</span></div>`;
 }

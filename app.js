@@ -6,7 +6,7 @@ const seedData = {
     { id: "evt-raya", name: "Hari Raya Appreciation", festival: "Hari Raya", festivalDate: "2026-03-20", budget: 12500, status: "Completed" },
     { id: "evt-diwali", name: "Diwali Festival of Wins", festival: "Diwali", festivalDate: "2026-11-08", budget: 15000, status: "Planned" },
     { id: "evt-xmas", name: "Christmas Countdown", festival: "Christmas", festivalDate: "2026-12-25", budget: 22000, status: "Planned" },
-    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", festivalDate: "2026-09-25", budget: 9000, status: "Active" }
+    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", festivalDate: "2026-09-25", budget: 9000, status: "Planned" }
   ],
   rewards: [
     { id: "r1", playerId: "PL-1042", playerName: "Alicia Tan", tier: "VIP", eventId: "evt-cny", type: "Credit", description: "Lucky bonus credits", quantity: 1, unitCost: 288, date: "2026-02-08", status: "Issued" },
@@ -32,8 +32,15 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "sh
 
 function normalizeEvent(event) {
   const { startDate, endDate, ...rest } = event;
+  const status = event.status === "Active"
+    ? "Planned"
+    : ["Unplan", "Planned", "Completed"].includes(event.status)
+      ? event.status
+      : "Unplan";
+
   return {
     ...rest,
+    status,
     festivalDate: event.festivalDate || startDate || endDate || ""
   };
 }
@@ -109,11 +116,11 @@ function render() {
 function renderMetrics() {
   const paid = state.events.reduce((sum, campaign) => sum + eventPaidPayout(campaign.id), 0);
   const recipients = new Set(state.rewards.map(reward => reward.playerId)).size;
-  const active = state.events.filter(event => event.status === "Active").length;
+  const planned = state.events.filter(event => event.status === "Planned").length;
   const metrics = [
     ["Actual payout", money.format(paid), `${state.rewards.length} paid reward records`, "RM", "#28755a"],
     ["Unique recipients", recipients.toLocaleString(), "Across all festival events", "◎", "#3d6781"],
-    ["Events tracked", state.events.length, `${active} currently active`, "◇", "#a56c19"]
+    ["Events tracked", state.events.length, `${planned} planned`, "◇", "#a56c19"]
   ];
   document.querySelector("#metricGrid").innerHTML = metrics.map(([label, value, detail, symbol, tone]) => `
     <article class="metric-card" style="--tone:${tone}"><div class="metric-label"><span>${label}</span><span class="metric-symbol">${symbol}</span></div><div class="metric-value">${value}</div><div class="metric-detail">${detail}</div></article>`).join("");

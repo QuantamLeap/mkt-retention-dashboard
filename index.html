@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-7">
+  <link rel="stylesheet" href="styles.css?v=20260928-8">
 </head>
 <body>
   <div class="app-shell">
@@ -65,7 +65,7 @@
               <div><span class="eyebrow">ACTIVE & RECENT</span><h2>Festival events</h2></div>
               <button class="text-button" data-go-view="events">View all →</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Event</th><th>Period</th><th>Recipients</th><th>Budget</th><th>Rewards</th><th>Paid Out</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Event</th><th>Festival Date</th><th>Recipients</th><th>Budget</th><th>Rewards</th><th>Paid Out</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
           </section>
         </section>
 
@@ -120,8 +120,7 @@
         <label class="full">Event name<input name="name" required placeholder="e.g. Hari Raya Celebration"></label>
         <label>Festival<select name="festival" required><option>CNY</option><option>Christmas</option><option>Diwali</option><option>Hari Raya</option><option>Mid-Autumn</option><option>Other</option></select></label>
         <label>Status<select name="status"><option>Planned</option><option>Active</option><option>Completed</option></select></label>
-        <label>Start date<input name="startDate" type="date" required></label>
-        <label>End date<input name="endDate" type="date" required></label>
+        <label class="full">Festival date<input name="festivalDate" type="date" required></label>
         <label class="full">Budget (RM)<input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
       </div>
       <div class="dialog-actions"><button class="button danger hidden" id="deleteEventButton" type="button">Delete event</button><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" id="eventSubmitButton" type="submit">Create event</button></div>
@@ -166,7 +165,7 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260928-7"></script>
-  <!-- deployment-sync-20260928-7 -->
+  <script src="app.js?v=20260928-8"></script>
+  <!-- deployment-sync-20260928-8 -->
 </body>
 </html>

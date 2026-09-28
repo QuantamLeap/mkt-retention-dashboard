@@ -2,11 +2,11 @@ const STORAGE_KEY = "retainly-dashboard-v1";
 
 const seedData = {
   events: [
-    { id: "evt-cny", name: "CNY Lucky Rewards", festival: "CNY", startDate: "2026-02-05", endDate: "2026-02-20", budget: 18000, status: "Completed" },
-    { id: "evt-raya", name: "Hari Raya Appreciation", festival: "Hari Raya", startDate: "2026-03-12", endDate: "2026-03-28", budget: 12500, status: "Completed" },
-    { id: "evt-diwali", name: "Diwali Festival of Wins", festival: "Diwali", startDate: "2026-10-20", endDate: "2026-11-04", budget: 15000, status: "Planned" },
-    { id: "evt-xmas", name: "Christmas Countdown", festival: "Christmas", startDate: "2026-12-10", endDate: "2026-12-26", budget: 22000, status: "Planned" },
-    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", startDate: "2026-09-18", endDate: "2026-10-02", budget: 9000, status: "Active" }
+    { id: "evt-cny", name: "CNY Lucky Rewards", festival: "CNY", festivalDate: "2026-02-17", budget: 18000, status: "Completed" },
+    { id: "evt-raya", name: "Hari Raya Appreciation", festival: "Hari Raya", festivalDate: "2026-03-20", budget: 12500, status: "Completed" },
+    { id: "evt-diwali", name: "Diwali Festival of Wins", festival: "Diwali", festivalDate: "2026-11-08", budget: 15000, status: "Planned" },
+    { id: "evt-xmas", name: "Christmas Countdown", festival: "Christmas", festivalDate: "2026-12-25", budget: 22000, status: "Planned" },
+    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", festivalDate: "2026-09-25", budget: 9000, status: "Active" }
   ],
   rewards: [
     { id: "r1", playerId: "PL-1042", playerName: "Alicia Tan", tier: "VIP", eventId: "evt-cny", type: "Credit", description: "Lucky bonus credits", quantity: 1, unitCost: 288, date: "2026-02-08", status: "Issued" },
@@ -27,12 +27,20 @@ let editingEventId = null;
 const money = new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR", currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
+function normalizeEvent(event) {
+  const { startDate, endDate, ...rest } = event;
+  return {
+    ...rest,
+    festivalDate: event.festivalDate || startDate || endDate || ""
+  };
+}
+
 function loadState() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!stored) return structuredClone(seedData);
     return {
-      events: Array.isArray(stored.events) ? stored.events : [],
+      events: Array.isArray(stored.events) ? stored.events.map(normalizeEvent) : [],
       rewards: Array.isArray(stored.rewards) ? stored.rewards : [],
       payouts: Array.isArray(stored.payouts) ? stored.payouts : []
     };
@@ -122,7 +130,7 @@ function renderRewardMix() {
 }
 
 function eventRow(event) {
-  return `<tr><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.startDate)}<br><small>to ${formatDate(event.endDate)}</small></td><td>${eventRecipients(event.id)}</td><td>${money.format(event.budget)}</td><td><strong>${money.format(eventRewardValue(event.id))}</strong></td><td><strong>${money.format(eventPaidPayout(event.id))}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
+  return `<tr><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.festivalDate)}</td><td>${eventRecipients(event.id)}</td><td>${money.format(event.budget)}</td><td><strong>${money.format(eventRewardValue(event.id))}</strong></td><td><strong>${money.format(eventPaidPayout(event.id))}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
 }
 
 function renderOverviewEvents() {
@@ -144,7 +152,7 @@ function renderEventGrid() {
         </div>
       </div>
       <h3>${escapeHtml(event.name)}</h3>
-      <p>${formatDate(event.startDate)} – ${formatDate(event.endDate)}</p>
+      <p>Festival date · ${formatDate(event.festivalDate)}</p>
       <div class="event-stats event-stats-three">
         <div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div>
         <div class="event-stat"><span>Rewards</span><strong>${money.format(rewards)}</strong></div>
@@ -279,8 +287,7 @@ function openEditEventDialog(id) {
   form.elements.name.value = campaign.name;
   form.elements.festival.value = campaign.festival;
   form.elements.status.value = campaign.status;
-  form.elements.startDate.value = campaign.startDate;
-  form.elements.endDate.value = campaign.endDate;
+  form.elements.festivalDate.value = campaign.festivalDate || "";
   form.elements.budget.value = campaign.budget;
   setEventDialogMode("edit");
   openDialog(document.querySelector("#eventDialog"));
@@ -370,7 +377,6 @@ document.querySelector("#menuButton").addEventListener("click", () => document.q
 document.querySelector("#eventForm").addEventListener("submit", event => {
   event.preventDefault();
   const values = Object.fromEntries(new FormData(event.currentTarget));
-  if (values.endDate < values.startDate) { showToast("End date must be after start date"); return; }
 
   if (editingEventId) {
     const index = state.events.findIndex(campaign => campaign.id === editingEventId);

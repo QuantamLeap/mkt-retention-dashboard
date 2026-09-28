@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f5f1">
+  <title>Retainly | Marketing Retention</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><span class="brand-mark">R</span><span>RETAINLY</span></div>
+      <nav aria-label="Main navigation">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">⌂</span>Overview</button>
+        <button class="nav-item" data-view="events"><span class="nav-icon">◇</span>Events</button>
+        <button class="nav-item" data-view="rewards"><span class="nav-icon">◎</span>Player rewards</button>
+      </nav>
+      <div class="sidebar-note">
+        <span class="status-dot"></span>
+        <div><strong>Records saved</strong><small>Locally on this device</small></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="icon-button menu-button" id="menuButton" aria-label="Open navigation">☰</button>
+        <div class="page-heading">
+          <p>MARKETING RETENTION</p>
+          <h1 id="pageTitle">Campaign overview</h1>
+        </div>
+        <div class="header-actions">
+          <button class="button secondary" id="exportButton">⇩ <span>Export CSV</span></button>
+          <button class="button primary" id="openRewardButton">＋ <span>Issue reward</span></button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="view active" id="overviewView">
+          <div class="period-row">
+            <div><span class="eyebrow">CURRENT PERIOD</span><strong>All campaign activity</strong></div>
+            <button class="button secondary" id="openEventButton">＋ New event</button>
+          </div>
+
+          <div class="metric-grid" id="metricGrid"></div>
+
+          <div class="dashboard-grid">
+            <section class="panel cost-panel">
+              <div class="panel-header">
+                <div><span class="eyebrow">SPEND BY EVENT</span><h2>Campaign cost</h2></div>
+                <span class="panel-meta" id="averageCost"></span>
+              </div>
+              <div class="bar-chart" id="costChart"></div>
+            </section>
+
+            <section class="panel reward-panel">
+              <div class="panel-header"><div><span class="eyebrow">DISTRIBUTION</span><h2>Reward mix</h2></div></div>
+              <div id="rewardMix"></div>
+            </section>
+          </div>
+
+          <section class="panel table-panel">
+            <div class="panel-header">
+              <div><span class="eyebrow">ACTIVE & RECENT</span><h2>Festival events</h2></div>
+              <button class="text-button" data-go-view="events">View all →</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Event</th><th>Period</th><th>Recipients</th><th>Budget</th><th>Cost</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
+          </section>
+        </section>
+
+        <section class="view" id="eventsView">
+          <div class="section-toolbar">
+            <div><span class="eyebrow">CAMPAIGN REGISTER</span><h2>All festival events</h2></div>
+            <button class="button primary open-event">＋ New event</button>
+          </div>
+          <div class="event-grid" id="eventGrid"></div>
+        </section>
+
+        <section class="view" id="rewardsView">
+          <div class="section-toolbar rewards-toolbar">
+            <div><span class="eyebrow">PLAYER LEDGER</span><h2>Reward records</h2></div>
+            <button class="button primary open-reward">＋ Issue reward</button>
+          </div>
+          <div class="filters">
+            <label class="search-field"><span>⌕</span><input id="searchInput" type="search" placeholder="Search player ID or name"></label>
+            <select id="eventFilter" aria-label="Filter by event"><option value="all">All events</option></select>
+            <select id="typeFilter" aria-label="Filter by reward type"><option value="all">All reward types</option><option value="Credit">Free credit</option><option value="Physical">Physical gift</option></select>
+          </div>
+          <section class="panel table-panel records-panel">
+            <div class="table-wrap"><table><thead><tr><th>Player</th><th>Event</th><th>Reward</th><th>Value</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="rewardTable"></tbody></table></div>
+            <div class="table-footer" id="recordCount"></div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="eventDialog">
+    <form method="dialog" id="eventForm">
+      <div class="dialog-header"><div><span class="eyebrow">NEW CAMPAIGN</span><h2>Create festival event</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
+      <div class="form-grid">
+        <label class="full">Event name<input name="name" required placeholder="e.g. Hari Raya Celebration"></label>
+        <label>Festival<select name="festival" required><option>CNY</option><option>Christmas</option><option>Diwali</option><option>Hari Raya</option><option>Mid-Autumn</option><option>Other</option></select></label>
+        <label>Status<select name="status"><option>Planned</option><option>Active</option><option>Completed</option></select></label>
+        <label>Start date<input name="startDate" type="date" required></label>
+        <label>End date<input name="endDate" type="date" required></label>
+        <label class="full">Budget (USD)<input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
+      </div>
+      <div class="dialog-actions"><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" type="submit">Create event</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="rewardDialog">
+    <form method="dialog" id="rewardForm">
+      <div class="dialog-header"><div><span class="eyebrow">PLAYER REWARD</span><h2>Issue a new reward</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
+      <div class="form-grid">
+        <label>Player ID<input name="playerId" required placeholder="PL-1028"></label>
+        <label>Player name<input name="playerName" required placeholder="Full name"></label>
+        <label>Player tier<select name="tier"><option>VIP</option><option>Gold</option><option>Silver</option><option>Standard</option></select></label>
+        <label>Event<select name="eventId" id="rewardEventSelect" required></select></label>
+        <label>Reward type<select name="type" id="rewardType"><option value="Credit">Free credit</option><option value="Physical">Physical gift</option></select></label>
+        <label>Reward description<input name="description" required value="Bonus credits"></label>
+        <label>Quantity<input name="quantity" type="number" min="1" step="1" value="1" required></label>
+        <label>Unit cost (USD)<input name="unitCost" type="number" min="0" step="0.01" required placeholder="50"></label>
+        <label>Date issued<input name="date" type="date" required></label>
+        <label>Fulfilment<select name="status"><option>Issued</option><option>Pending</option><option>Delivered</option></select></label>
+      </div>
+      <div class="cost-preview"><span>Calculated cost</span><strong id="costPreview">$0.00</strong></div>
+      <div class="dialog-actions"><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save reward</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

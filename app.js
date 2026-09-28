@@ -1,0 +1,167 @@
+const STORAGE_KEY = "retainly-dashboard-v1";
+
+const seedData = {
+  events: [
+    { id: "evt-cny", name: "CNY Lucky Rewards", festival: "CNY", startDate: "2026-02-05", endDate: "2026-02-20", budget: 18000, status: "Completed" },
+    { id: "evt-raya", name: "Hari Raya Appreciation", festival: "Hari Raya", startDate: "2026-03-12", endDate: "2026-03-28", budget: 12500, status: "Completed" },
+    { id: "evt-diwali", name: "Diwali Festival of Wins", festival: "Diwali", startDate: "2026-10-20", endDate: "2026-11-04", budget: 15000, status: "Planned" },
+    { id: "evt-xmas", name: "Christmas Countdown", festival: "Christmas", startDate: "2026-12-10", endDate: "2026-12-26", budget: 22000, status: "Planned" },
+    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", startDate: "2026-09-18", endDate: "2026-10-02", budget: 9000, status: "Active" }
+  ],
+  rewards: [
+    { id: "r1", playerId: "PL-1042", playerName: "Alicia Tan", tier: "VIP", eventId: "evt-cny", type: "Credit", description: "Lucky bonus credits", quantity: 1, unitCost: 288, date: "2026-02-08", status: "Issued" },
+    { id: "r2", playerId: "PL-1189", playerName: "Dev Kumar", tier: "Gold", eventId: "evt-cny", type: "Physical", description: "Premium tea hamper", quantity: 1, unitCost: 145, date: "2026-02-09", status: "Delivered" },
+    { id: "r3", playerId: "PL-2031", playerName: "Nur Imani", tier: "VIP", eventId: "evt-raya", type: "Credit", description: "Festive cashback", quantity: 1, unitCost: 500, date: "2026-03-15", status: "Issued" },
+    { id: "r4", playerId: "PL-1566", playerName: "Marcus Lee", tier: "Silver", eventId: "evt-raya", type: "Physical", description: "Festive gift box", quantity: 2, unitCost: 88, date: "2026-03-17", status: "Delivered" },
+    { id: "r5", playerId: "PL-1007", playerName: "Priya Nair", tier: "VIP", eventId: "evt-moon", type: "Physical", description: "Mooncake collection", quantity: 1, unitCost: 198, date: "2026-09-21", status: "Delivered" },
+    { id: "r6", playerId: "PL-2214", playerName: "Ethan Wong", tier: "Gold", eventId: "evt-moon", type: "Credit", description: "VIP night credits", quantity: 1, unitCost: 350, date: "2026-09-22", status: "Issued" },
+    { id: "r7", playerId: "PL-1872", playerName: "Siti Rahman", tier: "Standard", eventId: "evt-moon", type: "Physical", description: "Lantern gift set", quantity: 1, unitCost: 75, date: "2026-09-23", status: "Pending" },
+    { id: "r8", playerId: "PL-1042", playerName: "Alicia Tan", tier: "VIP", eventId: "evt-raya", type: "Credit", description: "Loyalty credits", quantity: 1, unitCost: 420, date: "2026-03-20", status: "Issued" }
+  ]
+};
+
+let state = loadState();
+const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || structuredClone(seedData); }
+  catch { return structuredClone(seedData); }
+}
+
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function eventById(id) { return state.events.find(event => event.id === id); }
+function rewardCost(reward) { return Number(reward.quantity) * Number(reward.unitCost); }
+function eventCost(id) { return state.rewards.filter(reward => reward.eventId === id).reduce((sum, reward) => sum + rewardCost(reward), 0); }
+function eventRecipients(id) { return new Set(state.rewards.filter(reward => reward.eventId === id).map(reward => reward.playerId)).size; }
+function formatDate(value) { return dateFormat.format(new Date(`${value}T00:00:00`)); }
+function initials(name) { return name.split(" ").map(part => part[0]).slice(0, 2).join("").toUpperCase(); }
+function escapeHtml(value) { const element = document.createElement("div"); element.textContent = String(value); return element.innerHTML; }
+
+function render() {
+  renderMetrics();
+  renderCostChart();
+  renderRewardMix();
+  renderOverviewEvents();
+  renderEventGrid();
+  renderSelects();
+  renderRewards();
+}
+
+function renderMetrics() {
+  const totalCost = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const credits = state.rewards.filter(reward => reward.type === "Credit").reduce((sum, reward) => sum + Number(reward.quantity), 0);
+  const recipients = new Set(state.rewards.map(reward => reward.playerId)).size;
+  const active = state.events.filter(event => event.status === "Active").length;
+  const metrics = [
+    ["Total campaign cost", money.format(totalCost), `${state.rewards.length} rewards recorded`, "$", "#d54d3f"],
+    ["Unique recipients", recipients.toLocaleString(), "Across all festival events", "◎", "#3d6781"],
+    ["Credit rewards", credits.toLocaleString(), "Credit allocations issued", "+", "#28755a"],
+    ["Events tracked", state.events.length, `${active} currently active`, "◇", "#a56c19"]
+  ];
+  document.querySelector("#metricGrid").innerHTML = metrics.map(([label, value, detail, symbol, tone]) => `
+    <article class="metric-card" style="--tone:${tone}"><div class="metric-label"><span>${label}</span><span class="metric-symbol">${symbol}</span></div><div class="metric-value">${value}</div><div class="metric-detail">${detail}</div></article>`).join("");
+}
+
+function renderCostChart() {
+  const values = state.events.map(event => ({ event, cost: eventCost(event.id) }));
+  const max = Math.max(...values.map(item => item.cost), 1);
+  const average = values.reduce((sum, item) => sum + item.cost, 0) / Math.max(values.length, 1);
+  document.querySelector("#averageCost").textContent = `Average ${money.format(average)}`;
+  document.querySelector("#costChart").innerHTML = values.map(({ event, cost }) => `
+    <div class="bar-column" title="${escapeHtml(event.name)}: ${money.format(cost)}"><span class="bar-value">${money.format(cost)}</span><div class="bar" style="height:${Math.max((cost / max) * 150, 4)}px"></div><span class="bar-label">${escapeHtml(event.festival)}</span></div>`).join("");
+}
+
+function renderRewardMix() {
+  const total = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const credit = state.rewards.filter(reward => reward.type === "Credit").reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const physical = total - credit;
+  const creditPct = total ? Math.round(credit / total * 100) : 0;
+  document.querySelector("#rewardMix").innerHTML = `
+    <div class="mix-total"><strong>${money.format(total)}</strong><span>Total recorded value</span></div>
+    <div class="mix-row"><div class="mix-line"><span>Free credits</span><span>${creditPct}% · ${money.format(credit)}</span></div><div class="mix-track"><div class="mix-fill" style="width:${creditPct}%"></div></div></div>
+    <div class="mix-row"><div class="mix-line"><span>Physical gifts</span><span>${100 - creditPct}% · ${money.format(physical)}</span></div><div class="mix-track"><div class="mix-fill physical" style="width:${100 - creditPct}%"></div></div></div>`;
+}
+
+function eventRow(event) {
+  return `<tr><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.startDate)}<br><small>to ${formatDate(event.endDate)}</small></td><td>${eventRecipients(event.id)}</td><td>${money.format(event.budget)}</td><td><strong>${money.format(eventCost(event.id))}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
+}
+function renderOverviewEvents() { document.querySelector("#overviewEvents").innerHTML = state.events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="6" class="empty-state">No events yet.</td></tr>`; }
+
+function renderEventGrid() {
+  document.querySelector("#eventGrid").innerHTML = state.events.map(event => {
+    const cost = eventCost(event.id); const used = event.budget ? Math.round(cost / event.budget * 100) : 0;
+    return `<article class="event-card"><div class="event-card-top"><div class="festival-mark">${escapeHtml(event.festival.slice(0, 3).toUpperCase())}</div><span class="badge ${event.status.toLowerCase()}">${event.status}</span></div><h3>${escapeHtml(event.name)}</h3><p>${formatDate(event.startDate)} – ${formatDate(event.endDate)}</p><div class="event-stats"><div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div><div class="event-stat"><span>Total cost</span><strong>${money.format(cost)}</strong></div></div><div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(used, 100)}%"></div></div><div class="budget-text"><span>${used}% used</span><span>${money.format(event.budget)} budget</span></div></article>`;
+  }).join("") || `<p class="empty-state">Create your first event to get started.</p>`;
+}
+
+function renderSelects() {
+  const options = state.events.map(event => `<option value="${event.id}">${escapeHtml(event.name)}</option>`).join("");
+  const eventFilter = document.querySelector("#eventFilter"); const currentFilter = eventFilter.value;
+  eventFilter.innerHTML = `<option value="all">All events</option>${options}`;
+  if (["all", ...state.events.map(event => event.id)].includes(currentFilter)) eventFilter.value = currentFilter;
+  document.querySelector("#rewardEventSelect").innerHTML = options;
+}
+
+function renderRewards() {
+  const search = document.querySelector("#searchInput").value.toLowerCase();
+  const eventId = document.querySelector("#eventFilter").value;
+  const type = document.querySelector("#typeFilter").value;
+  const filtered = state.rewards.filter(reward => {
+    const playerMatch = `${reward.playerId} ${reward.playerName}`.toLowerCase().includes(search);
+    return playerMatch && (eventId === "all" || reward.eventId === eventId) && (type === "all" || reward.type === type);
+  }).sort((a, b) => b.date.localeCompare(a.date));
+  document.querySelector("#rewardTable").innerHTML = filtered.map(reward => {
+    const event = eventById(reward.eventId);
+    return `<tr><td><div class="player-cell"><span class="avatar">${initials(reward.playerName)}</span><div><strong>${escapeHtml(reward.playerName)}</strong><small>${escapeHtml(reward.playerId)} · ${escapeHtml(reward.tier)}</small></div></div></td><td>${event ? escapeHtml(event.name) : "Unknown"}</td><td><strong>${escapeHtml(reward.description)}</strong><small>${reward.type === "Credit" ? "Free credit" : "Physical gift"} · Qty ${reward.quantity}</small></td><td><strong>${money.format(rewardCost(reward))}</strong><small>${money.format(reward.unitCost)} each</small></td><td>${formatDate(reward.date)}</td><td><span class="badge ${reward.status.toLowerCase()}">${reward.status}</span></td><td><button class="delete-button" data-delete="${reward.id}" aria-label="Delete reward" title="Delete reward">×</button></td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="empty-state">No reward records match these filters.</td></tr>`;
+  document.querySelector("#recordCount").textContent = `Showing ${filtered.length} of ${state.rewards.length} reward records`;
+}
+
+function setView(view) {
+  const titles = { overview: "Campaign overview", events: "Festival events", rewards: "Player rewards" };
+  document.querySelectorAll(".view").forEach(element => element.classList.toggle("active", element.id === `${view}View`));
+  document.querySelectorAll(".nav-item").forEach(element => element.classList.toggle("active", element.dataset.view === view));
+  document.querySelector("#pageTitle").textContent = titles[view];
+  document.querySelector("#sidebar").classList.remove("open");
+}
+
+function showToast(message) { const toast = document.querySelector("#toast"); toast.textContent = message; toast.classList.add("show"); setTimeout(() => toast.classList.remove("show"), 2400); }
+function openDialog(dialog) { dialog.showModal(); }
+function today() { return new Date().toISOString().slice(0, 10); }
+
+document.addEventListener("click", event => {
+  const nav = event.target.closest("[data-view]"); if (nav) setView(nav.dataset.view);
+  const go = event.target.closest("[data-go-view]"); if (go) setView(go.dataset.goView);
+  if (event.target.closest("#openEventButton, .open-event")) openDialog(document.querySelector("#eventDialog"));
+  if (event.target.closest("#openRewardButton, .open-reward")) { document.querySelector("#rewardForm [name=date]").value = today(); updateCostPreview(); openDialog(document.querySelector("#rewardDialog")); }
+  if (event.target.closest(".close-dialog")) event.target.closest("dialog").close();
+  const deleteButton = event.target.closest("[data-delete]");
+  if (deleteButton && confirm("Delete this reward record? This cannot be undone.")) { state.rewards = state.rewards.filter(reward => reward.id !== deleteButton.dataset.delete); saveState(); render(); showToast("Reward record deleted"); }
+});
+
+document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
+["searchInput", "eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "searchInput" ? "input" : "change", renderRewards));
+
+document.querySelector("#eventForm").addEventListener("submit", event => {
+  event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
+  if (values.endDate < values.startDate) { showToast("End date must be after start date"); return; }
+  state.events.unshift({ ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) }); saveState(); event.currentTarget.reset(); document.querySelector("#eventDialog").close(); render(); showToast("Festival event created");
+});
+
+function updateCostPreview() { const form = document.querySelector("#rewardForm"); document.querySelector("#costPreview").textContent = money.format(Number(form.elements.quantity.value || 0) * Number(form.elements.unitCost.value || 0)); }
+document.querySelector("#rewardForm").addEventListener("input", updateCostPreview);
+document.querySelector("#rewardType").addEventListener("change", event => { document.querySelector("#rewardForm [name=description]").value = event.target.value === "Credit" ? "Bonus credits" : "Festive gift"; });
+document.querySelector("#rewardForm").addEventListener("submit", event => {
+  event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
+  state.rewards.push({ ...values, id: `reward-${Date.now()}`, quantity: Number(values.quantity), unitCost: Number(values.unitCost) }); saveState(); event.currentTarget.reset(); document.querySelector("#rewardDialog").close(); render(); showToast("Player reward saved");
+});
+
+document.querySelector("#exportButton").addEventListener("click", () => {
+  const headers = ["Player ID", "Player Name", "Tier", "Event", "Reward Type", "Description", "Quantity", "Unit Cost", "Total Cost", "Date", "Status"];
+  const rows = state.rewards.map(reward => [reward.playerId, reward.playerName, reward.tier, eventById(reward.eventId)?.name || "", reward.type, reward.description, reward.quantity, reward.unitCost, rewardCost(reward), reward.date, reward.status]);
+  const csv = [headers, ...rows].map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
+  const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); link.download = `retention-rewards-${today()}.csv`; link.click(); URL.revokeObjectURL(link.href); showToast("CSV export downloaded");
+});
+
+render();

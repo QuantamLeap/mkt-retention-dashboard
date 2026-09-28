@@ -95,12 +95,10 @@ function render() {
 }
 
 function renderMetrics() {
-  const rewardValue = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
   const paid = state.events.reduce((sum, campaign) => sum + eventPaidPayout(campaign.id), 0);
   const recipients = new Set(state.rewards.map(reward => reward.playerId)).size;
   const active = state.events.filter(event => event.status === "Active").length;
   const metrics = [
-    ["Rewards issued", money.format(rewardValue), `${state.rewards.length} reward records`, "+", "#d54d3f"],
     ["Actual payout", money.format(paid), `${state.rewards.length} paid reward records`, "RM", "#28755a"],
     ["Unique recipients", recipients.toLocaleString(), "Across all festival events", "◎", "#3d6781"],
     ["Events tracked", state.events.length, `${active} currently active`, "◇", "#a56c19"]
@@ -124,22 +122,21 @@ function renderRewardMix() {
   const physical = total - credit;
   const creditPct = total ? Math.round(credit / total * 100) : 0;
   document.querySelector("#rewardMix").innerHTML = `
-    <div class="mix-total"><strong>${money.format(total)}</strong><span>Total reward value</span></div>
+    <div class="mix-total"><strong>${money.format(total)}</strong><span>Total paid out</span></div>
     <div class="mix-row"><div class="mix-line"><span>Free credits</span><span>${creditPct}% · ${money.format(credit)}</span></div><div class="mix-track"><div class="mix-fill" style="width:${creditPct}%"></div></div></div>
     <div class="mix-row"><div class="mix-line"><span>Physical gifts</span><span>${100 - creditPct}% · ${money.format(physical)}</span></div><div class="mix-track"><div class="mix-fill physical" style="width:${100 - creditPct}%"></div></div></div>`;
 }
 
 function eventRow(event) {
-  return `<tr><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.festivalDate)}</td><td>${eventRecipients(event.id)}</td><td>${money.format(event.budget)}</td><td><strong>${money.format(eventRewardValue(event.id))}</strong></td><td><strong>${money.format(eventPaidPayout(event.id))}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
+  return `<tr><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.festivalDate)}</td><td>${eventRecipients(event.id)}</td><td>${money.format(event.budget)}</td><td><strong>${money.format(eventPaidPayout(event.id))}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
 }
 
 function renderOverviewEvents() {
-  document.querySelector("#overviewEvents").innerHTML = state.events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="7" class="empty-state">No events yet.</td></tr>`;
+  document.querySelector("#overviewEvents").innerHTML = state.events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="6" class="empty-state">No events yet.</td></tr>`;
 }
 
 function renderEventGrid() {
   document.querySelector("#eventGrid").innerHTML = state.events.map(event => {
-    const rewards = eventRewardValue(event.id);
     const paid = eventPaidPayout(event.id);
     const remaining = Number(event.budget) - paid;
     const used = event.budget ? Math.round(paid / Number(event.budget) * 100) : 0;
@@ -153,9 +150,8 @@ function renderEventGrid() {
       </div>
       <h3>${escapeHtml(event.name)}</h3>
       <p>Festival date · ${formatDate(event.festivalDate)}</p>
-      <div class="event-stats event-stats-three">
+      <div class="event-stats">
         <div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div>
-        <div class="event-stat"><span>Rewards</span><strong>${money.format(rewards)}</strong></div>
         <div class="event-stat"><span>Paid out</span><strong>${money.format(paid)}</strong></div>
       </div>
       <div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(Math.max(used, 0), 100)}%"></div></div>

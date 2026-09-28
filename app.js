@@ -189,8 +189,9 @@ function renderEventGrid() {
       </div>
       <h3>${escapeHtml(event.name)}</h3>
       <p>Festival date · ${formatDate(event.festivalDate)}</p>
-      <div class="event-stats">
+      <div class="event-stats event-stats-three">
         <div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div>
+        <div class="event-stat"><span>Budget</span><strong>${money.format(Number(event.budget) || 0)}</strong></div>
         <div class="event-stat"><span>Paid out</span><strong>${money.format(paid)}</strong></div>
       </div>
       <div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(Math.max(used, 0), 100)}%"></div></div>

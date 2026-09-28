@@ -46,8 +46,29 @@ function eventById(id) { return state.events.find(event => event.id === id); }
 function rewardCost(reward) { return Number(reward.quantity) * Number(reward.unitCost); }
 function eventRewardValue(id) { return state.rewards.filter(reward => reward.eventId === id).reduce((sum, reward) => sum + rewardCost(reward), 0); }
 function payoutAmount(payout) { return Number(payout.amount) || 0; }
-function eventPaidPayout(id) { return state.payouts.filter(payout => payout.eventId === id && payout.status === "Paid").reduce((sum, payout) => sum + payoutAmount(payout), 0); }
+function eventAdditionalPaidPayout(id) { return state.payouts.filter(payout => payout.eventId === id && payout.status === "Paid").reduce((sum, payout) => sum + payoutAmount(payout), 0); }
+function eventPaidPayout(id) { return eventRewardValue(id) + eventAdditionalPaidPayout(id); }
 function eventPendingPayout(id) { return state.payouts.filter(payout => payout.eventId === id && payout.status === "Pending").reduce((sum, payout) => sum + payoutAmount(payout), 0); }
+function rewardPayoutRecord(reward) {
+  return {
+    id: `reward-payout-${reward.id}`,
+    eventId: reward.eventId,
+    date: reward.date,
+    type: reward.type === "Credit" ? "Free Credit" : "Physical Gift",
+    amount: rewardCost(reward),
+    quantity: Number(reward.quantity) || 1,
+    playerBatch: `${reward.playerId} · ${reward.playerName}`,
+    reference: reward.description || "Issued reward",
+    status: "Paid",
+    recordedBy: "Issue Reward",
+    notes: "Automatically recorded as paid out when the reward was issued.",
+    sourceRewardId: reward.id,
+    isRewardPayout: true
+  };
+}
+function allPayoutRecords() {
+  return [...state.rewards.map(rewardPayoutRecord), ...state.payouts];
+}
 function eventRecipients(id) { return new Set(state.rewards.filter(reward => reward.eventId === id).map(reward => reward.playerId)).size; }
 function formatDate(value) { return value ? dateFormat.format(new Date(`${value}T00:00:00`)) : "—"; }
 function initials(name) { return String(name || "?").split(" ").map(part => part[0]).slice(0, 2).join("").toUpperCase(); }
@@ -67,12 +88,12 @@ function render() {
 
 function renderMetrics() {
   const rewardValue = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
-  const paid = state.payouts.filter(payout => payout.status === "Paid").reduce((sum, payout) => sum + payoutAmount(payout), 0);
+  const paid = state.events.reduce((sum, campaign) => sum + eventPaidPayout(campaign.id), 0);
   const recipients = new Set(state.rewards.map(reward => reward.playerId)).size;
   const active = state.events.filter(event => event.status === "Active").length;
   const metrics = [
     ["Rewards issued", money.format(rewardValue), `${state.rewards.length} reward records`, "+", "#d54d3f"],
-    ["Actual payout", money.format(paid), `${state.payouts.filter(p => p.status === "Paid").length} paid records`, "$", "#28755a"],
+    ["Actual payout", money.format(paid), `${state.rewards.length + state.payouts.filter(p => p.status === "Paid").length} paid records`, "$", "#28755a"],
     ["Unique recipients", recipients.toLocaleString(), "Across all festival events", "◎", "#3d6781"],
     ["Events tracked", state.events.length, `${active} currently active`, "◇", "#a56c19"]
   ];
@@ -131,7 +152,7 @@ function renderEventGrid() {
       </div>
       <div class="budget-track"><div class="budget-fill ${used > 100 ? "over" : ""}" style="width:${Math.min(Math.max(used, 0), 100)}%"></div></div>
       <div class="budget-text"><span>${used}% paid</span><span>${money.format(remaining)} remaining</span></div>
-      <button class="button secondary event-payout-button" type="button" data-record-payout="${escapeHtml(event.id)}">＋ Record payout</button>
+      <button class="button secondary event-payout-button" type="button" data-record-payout="${escapeHtml(event.id)}">＋ Additional payout</button>
     </article>`;
   }).join("") || `<p class="empty-state">Create your first event to get started.</p>`;
 }
@@ -181,37 +202,42 @@ function renderPayouts() {
   const search = document.querySelector("#payoutSearchInput").value.toLowerCase();
   const eventId = document.querySelector("#payoutEventFilter").value;
   const status = document.querySelector("#payoutStatusFilter").value;
+  const payoutRecords = allPayoutRecords();
 
-  const paidTotal = state.payouts.filter(p => p.status === "Paid").reduce((sum, p) => sum + payoutAmount(p), 0);
-  const pendingTotal = state.payouts.filter(p => p.status === "Pending").reduce((sum, p) => sum + payoutAmount(p), 0);
-  const cancelledTotal = state.payouts.filter(p => p.status === "Cancelled").reduce((sum, p) => sum + payoutAmount(p), 0);
+  const paidTotal = payoutRecords.filter(p => p.status === "Paid").reduce((sum, p) => sum + payoutAmount(p), 0);
+  const pendingTotal = payoutRecords.filter(p => p.status === "Pending").reduce((sum, p) => sum + payoutAmount(p), 0);
+  const cancelledTotal = payoutRecords.filter(p => p.status === "Cancelled").reduce((sum, p) => sum + payoutAmount(p), 0);
 
   document.querySelector("#payoutSummary").innerHTML = [
-    ["Actual payout", money.format(paidTotal), "Paid"],
-    ["Pending payout", money.format(pendingTotal), "Pending"],
-    ["Cancelled", money.format(cancelledTotal), "Cancelled"]
+    ["Actual payout", money.format(paidTotal), "Issued rewards + additional paid payouts"],
+    ["Pending payout", money.format(pendingTotal), "Additional payouts awaiting completion"],
+    ["Cancelled", money.format(cancelledTotal), "Cancelled additional payouts"]
   ].map(([label, value, detail]) => `<article class="payout-summary-card"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join("");
 
-  const filtered = state.payouts.filter(payout => {
+  const filtered = payoutRecords.filter(payout => {
     const haystack = `${payout.playerBatch || ""} ${payout.reference || ""} ${payout.type || ""} ${payout.recordedBy || ""}`.toLowerCase();
     return haystack.includes(search) && (eventId === "all" || payout.eventId === eventId) && (status === "all" || payout.status === status);
   }).sort((a, b) => b.date.localeCompare(a.date));
 
   document.querySelector("#payoutTable").innerHTML = filtered.map(payout => {
-    const event = eventById(payout.eventId);
+    const campaign = eventById(payout.eventId);
+    const action = payout.isRewardPayout
+      ? `<button class="delete-button" data-delete-reward="${payout.sourceRewardId}" aria-label="Delete issued reward" title="Delete issued reward">×</button>`
+      : `<button class="delete-button" data-delete-payout="${payout.id}" aria-label="Delete payout" title="Delete payout">×</button>`;
+    const sourceLabel = payout.isRewardPayout ? "Auto from Issue Reward" : (payout.recordedBy || "Manual payout");
     return `<tr>
       <td>${formatDate(payout.date)}</td>
-      <td><strong>${event ? escapeHtml(event.name) : "Unknown"}</strong></td>
+      <td><strong>${campaign ? escapeHtml(campaign.name) : "Unknown"}</strong></td>
       <td><strong>${escapeHtml(payout.playerBatch || "—")}</strong><small>${escapeHtml(payout.type)}</small></td>
       <td><strong>${money.format(payoutAmount(payout))}</strong><small>Qty ${Number(payout.quantity) || 1}</small></td>
       <td>${escapeHtml(payout.reference || "—")}</td>
       <td><span class="badge ${payout.status.toLowerCase()}">${payout.status}</span></td>
-      <td>${escapeHtml(payout.recordedBy || "—")}</td>
-      <td><button class="delete-button" data-delete-payout="${payout.id}" aria-label="Delete payout" title="Delete payout">×</button></td>
+      <td>${escapeHtml(sourceLabel)}</td>
+      <td>${action}</td>
     </tr>`;
   }).join("") || `<tr><td colspan="8" class="empty-state">No payout records match these filters.</td></tr>`;
 
-  document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${state.payouts.length} payout records`;
+  document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${payoutRecords.length} payout records`;
 }
 
 function setView(view) {
@@ -321,11 +347,11 @@ document.addEventListener("click", event => {
   if (event.target.closest(".close-dialog")) event.target.closest("dialog").close();
 
   const deleteRewardButton = event.target.closest("[data-delete-reward]");
-  if (deleteRewardButton && confirm("Delete this reward record? This cannot be undone.")) {
+  if (deleteRewardButton && confirm("Delete this issued reward? Its paid-out record will also be removed. This cannot be undone.")) {
     state.rewards = state.rewards.filter(reward => reward.id !== deleteRewardButton.dataset.deleteReward);
     saveState();
     render();
-    showToast("Reward record deleted");
+    showToast("Reward and paid-out record deleted");
   }
 
   const deletePayoutButton = event.target.closest("[data-delete-payout]");
@@ -387,7 +413,7 @@ document.querySelector("#rewardForm").addEventListener("submit", event => {
   event.currentTarget.reset();
   document.querySelector("#rewardDialog").close();
   render();
-  showToast("Player reward saved");
+  showToast("Reward issued and recorded as paid out");
 });
 
 document.querySelector("#payoutForm").addEventListener("submit", event => {
@@ -409,7 +435,7 @@ document.querySelector("#payoutForm").addEventListener("submit", event => {
 document.querySelector("#exportButton").addEventListener("click", () => {
   const headers = ["Record Type", "Player / Batch", "Player ID", "Event", "Type", "Description / Reference", "Quantity", "Amount", "Date", "Status", "Recorded By"];
   const rewardRows = state.rewards.map(reward => [
-    "Reward", reward.playerName, reward.playerId, eventById(reward.eventId)?.name || "", reward.type, reward.description,
+    "Reward / Paid out", reward.playerName, reward.playerId, eventById(reward.eventId)?.name || "", reward.type, reward.description,
     reward.quantity, rewardCost(reward), reward.date, reward.status, ""
   ]);
   const payoutRows = state.payouts.map(payout => [

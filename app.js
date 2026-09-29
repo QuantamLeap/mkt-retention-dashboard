@@ -33,8 +33,8 @@ const FESTIVALS_BY_MARKET = {
   MY: ["CNY", "Raya", "Labour Day", "Merdeka", "Mid Autumn", "Diwali", "Halloween", "Christmas", "New Year", "World Cup", "Euro"],
   SG: ["CNY", "Raya", "Labour Day", "National Day", "Mid Autumn", "Diwali", "Halloween", "Christmas", "New Year", "World Cup", "Euro"],
   ID: ["Imlek", "Ramadan", "Idul Fitri", "Hari Kemerdekaan", "Natal", "Tahun Baru", "World Cup", "Euro"],
-  TH: ["CNY", "Songkran", "Loy Krathong", "Christmas", "New Year"],
-  MX: ["Carnival", "Independence Day", "Day of the Dead", "Christmas", "New Year"]
+  TH: ["CNY", "Songkran", "Loy Krathong", "Christmas", "New Year", "World Cup", "Euro"],
+  MX: ["Carnival", "Independence Day", "Day of the Dead", "Christmas", "New Year", "World Cup", "Euro"]
 };
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 

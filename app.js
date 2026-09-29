@@ -901,11 +901,10 @@ function openCreateEventDialog() {
   editingEventId = null;
   const form = document.querySelector("#eventForm");
   form.reset();
-  const preferredMarket = selectedEventMarket !== "all"
-    ? selectedEventMarket
-    : selectedOverviewMarket !== "all"
-      ? selectedOverviewMarket
-      : "MY";
+  const onEventsView = document.querySelector("#eventsView")?.classList.contains("active");
+  const preferredMarket = onEventsView
+    ? (selectedEventMarket !== "all" ? selectedEventMarket : "MY")
+    : (selectedOverviewMarket !== "all" ? selectedOverviewMarket : "MY");
   form.elements.market.value = preferredMarket;
   updateEventCurrencyLabel();
   setEventDialogMode("create");

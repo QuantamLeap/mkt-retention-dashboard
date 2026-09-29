@@ -84,7 +84,6 @@ function applySharedState(raw, detail = "Supabase · all devices") {
   state = normalizeDashboardState(raw);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   render();
-initializeSharedStorage();
   updateStorageStatus("Shared data synced", detail, "ok");
 }
 
@@ -894,3 +893,4 @@ document.querySelector("#exportButton").addEventListener("click", () => {
 });
 
 render();
+initializeSharedStorage();

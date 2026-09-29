@@ -218,3 +218,8 @@ dialog form { padding: 24px; }.dialog-header { display: flex; justify-content: s
   .overview-period-row { align-items: flex-end; }
   .overview-year-tabs { max-width: calc(100vw - 110px); }
 }
+
+#storageStatusDot[data-tone="ok"] { background: #62b68f; }
+#storageStatusDot[data-tone="syncing"] { background: #d7a847; }
+#storageStatusDot[data-tone="warning"] { background: #d58b3f; }
+#storageStatusDot[data-tone="error"] { background: #d55a4f; }

@@ -21,6 +21,7 @@ const seedData = {
   payouts: []
 };
 
+const hadLocalStoredState = Boolean(localStorage.getItem(STORAGE_KEY));
 let state = loadState();
 const sharedStorage = window.RetentionSharedStorage;
 let sharedStorageReady = false;
@@ -128,13 +129,19 @@ async function initializeSharedStorage() {
     if (remote) {
       sharedStorageReady = true;
       applySharedState(remote);
-    } else {
+    } else if (hadLocalStoredState) {
       sharedStorageReady = true;
       await sharedStorage.save(normalizeDashboardState(state));
-      updateStorageStatus("Shared data created", "Supabase · all devices", "ok");
+      updateStorageStatus("Shared data created", "Migrated from this device", "ok");
+    } else {
+      sharedStorageReady = false;
+      updateStorageStatus("Waiting for shared data", "Open the device with existing records first", "warning");
     }
 
-    sharedStorage.startPolling(nextState => applySharedState(nextState, "Updated from another device"));
+    sharedStorage.startPolling(nextState => {
+      sharedStorageReady = true;
+      applySharedState(nextState, "Updated from another device");
+    });
 
     window.addEventListener("focus", () => {
       sharedStorage.refresh(nextState => applySharedState(nextState, "Updated from another device")).catch(() => {});

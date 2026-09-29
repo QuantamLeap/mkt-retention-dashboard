@@ -223,3 +223,37 @@ dialog form { padding: 24px; }.dialog-header { display: flex; justify-content: s
 #storageStatusDot[data-tone="syncing"] { background: #d7a847; }
 #storageStatusDot[data-tone="warning"] { background: #d58b3f; }
 #storageStatusDot[data-tone="error"] { background: #d55a4f; }
+
+.market-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 12px; }
+.market-tab { min-height: 36px; min-width: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--muted); font-size: 11px; font-weight: 800; }
+.market-tab:hover { border-color: #b6bbb6; color: var(--ink); }
+.market-tab.active { border-color: var(--accent); background: var(--accent); color: white; }
+.overview-market-tabs { margin: 0 0 4px; }
+.market-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 22px; padding: 2px 7px; border-radius: 4px; background: #eef0ed; color: #424b48; font-size: 9px; font-weight: 800; letter-spacing: .4px; }
+.market-payout-grid { width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; align-self: stretch; padding: 8px 0 18px; }
+.market-payout-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 5px; background: #fafaf7; display: flex; flex-direction: column; justify-content: space-between; gap: 13px; }
+.market-payout-card > div { display: flex; align-items: center; gap: 7px; }
+.market-payout-card small, .market-payout-card > span { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.market-payout-card strong { font: 800 16px Manrope, sans-serif; overflow-wrap: anywhere; }
+.market-mix-note { margin-top: 16px; padding: 14px; border: 1px dashed var(--line); border-radius: 5px; background: #fafaf7; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.reward-filters { grid-template-columns: minmax(220px, 1fr) 130px 220px 180px; }
+.payout-filters { grid-template-columns: minmax(220px, 1fr) 130px 140px 220px; }
+.payout-summary.market-mode { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.market-summary-card .market-pill { margin-right: 5px; }
+#costChart:has(.market-payout-grid) { align-items: stretch; min-height: 180px; border-bottom: 0; }
+@media (max-width: 1100px) {
+  .market-payout-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .payout-summary.market-mode { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .reward-filters, .payout-filters { grid-template-columns: 1fr 150px 180px; }
+  .reward-filters .search-field, .payout-filters .search-field { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .market-tabs { width: 100%; }
+  .market-tab { flex: 1 0 auto; }
+  .market-payout-grid, .payout-summary.market-mode { grid-template-columns: 1fr 1fr; }
+  .reward-filters, .payout-filters { grid-template-columns: 1fr; }
+  .reward-filters .search-field, .payout-filters .search-field { grid-column: auto; }
+}
+@media (max-width: 480px) {
+  .market-payout-grid, .payout-summary.market-mode { grid-template-columns: 1fr; }
+}

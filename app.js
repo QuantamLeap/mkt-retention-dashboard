@@ -919,6 +919,22 @@ function updateEventCurrencyLabel() {
   if (label) label.textContent = `Budget (${marketCurrency(market)})`;
 }
 
+function updateEventFestivalOptions(preferredFestival = "") {
+  const market = document.querySelector("#eventMarketSelect")?.value || "MY";
+  const select = document.querySelector("#eventFestivalSelect");
+  if (!select) return;
+
+  const festivals = festivalListForMarket(market);
+  const preferred = normalizeFestivalName(market, preferredFestival || select.value);
+  select.innerHTML = festivals.map(festival => `<option value="${escapeHtml(festival)}">${escapeHtml(festival)}</option>`).join("");
+  select.value = festivals.includes(preferred) ? preferred : (festivals[0] || "");
+}
+
+function updateEventMarketFields(preferredFestival = "") {
+  updateEventCurrencyLabel();
+  updateEventFestivalOptions(preferredFestival);
+}
+
 function updateRewardCurrencyLabels() {
   const select = document.querySelector("#rewardEventSelect");
   const campaign = eventById(select?.value);
@@ -945,7 +961,7 @@ function openCreateEventDialog() {
     ? (selectedEventMarket !== "all" ? selectedEventMarket : "MY")
     : (selectedOverviewMarket !== "all" ? selectedOverviewMarket : "MY");
   form.elements.market.value = preferredMarket;
-  updateEventCurrencyLabel();
+  updateEventMarketFields();
   setEventDialogMode("create");
   openDialog(document.querySelector("#eventDialog"));
 }
@@ -957,7 +973,7 @@ function openEditEventDialog(id) {
   const form = document.querySelector("#eventForm");
   form.elements.name.value = campaign.name;
   form.elements.market.value = eventMarket(campaign);
-  form.elements.festival.value = campaign.festival;
+  updateEventMarketFields(campaign.festival);
   form.elements.status.value = campaign.status;
   form.elements.festivalDate.value = campaign.festivalDate || "";
   form.elements.budget.value = campaign.budget;
@@ -1069,7 +1085,7 @@ document.querySelector("#payoutSearchInput").addEventListener("input", renderPay
 document.querySelector("#payoutMarketFilter").addEventListener("change", () => { renderSelects(); renderPayouts(); });
 document.querySelector("#payoutYearFilter").addEventListener("change", () => { renderSelects(); renderPayouts(); });
 document.querySelector("#payoutEventFilter").addEventListener("change", renderPayouts);
-document.querySelector("#eventMarketSelect").addEventListener("change", updateEventCurrencyLabel);
+document.querySelector("#eventMarketSelect").addEventListener("change", () => updateEventMarketFields());
 document.querySelector("#rewardEventSelect").addEventListener("change", updateRewardCurrencyLabels);
 document.querySelector("#bulkRewardEventSelect").addEventListener("change", renderBulkPreview);
 
@@ -1081,6 +1097,7 @@ document.querySelector("#deleteAllRewardsButton").addEventListener("click", dele
 document.querySelector("#eventForm").addEventListener("submit", event => {
   event.preventDefault();
   const values = Object.fromEntries(new FormData(event.currentTarget));
+  values.festival = normalizeFestivalName(values.market || "MY", values.festival);
 
   if (editingEventId) {
     const index = state.events.findIndex(campaign => campaign.id === editingEventId);

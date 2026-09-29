@@ -470,7 +470,11 @@ function renderEventGrid() {
 }
 
 function renderSelects() {
-  const options = state.events.map(event => `<option value="${event.id}">${escapeHtml(event.name)}</option>`).join("");
+  const sortedEvents = state.events.slice().sort((a, b) => {
+    const marketCompare = eventMarket(a).localeCompare(eventMarket(b));
+    return marketCompare || String(a.festivalDate || "").localeCompare(String(b.festivalDate || ""));
+  });
+  const options = sortedEvents.map(event => `<option value="${event.id}">[${eventMarket(event)}] ${escapeHtml(event.name)}</option>`).join("");
 
   const eventFilter = document.querySelector("#eventFilter");
   const currentRewardFilter = eventFilter.value;
@@ -482,18 +486,39 @@ function renderSelects() {
   payoutEventFilter.innerHTML = `<option value="all">All campaigns</option>${options}`;
   if (["all", ...state.events.map(event => event.id)].includes(currentPayoutFilter)) payoutEventFilter.value = currentPayoutFilter;
 
-  document.querySelector("#rewardEventSelect").innerHTML = options;
-  document.querySelector("#bulkRewardEventSelect").innerHTML = options;
+  const payoutYearFilter = document.querySelector("#payoutYearFilter");
+  const currentYear = payoutYearFilter.value;
+  const years = availableEventYears();
+  payoutYearFilter.innerHTML = `<option value="all">All years</option>${years.map(year => `<option value="${year}">${year}</option>`).join("")}`;
+  if (["all", ...years].includes(currentYear)) payoutYearFilter.value = currentYear;
+
+  const rewardEventSelect = document.querySelector("#rewardEventSelect");
+  const currentRewardEvent = rewardEventSelect.value;
+  rewardEventSelect.innerHTML = options;
+  if (state.events.some(event => event.id === currentRewardEvent)) rewardEventSelect.value = currentRewardEvent;
+
+  const bulkRewardEventSelect = document.querySelector("#bulkRewardEventSelect");
+  const currentBulkEvent = bulkRewardEventSelect.value;
+  bulkRewardEventSelect.innerHTML = options;
+  if (state.events.some(event => event.id === currentBulkEvent)) bulkRewardEventSelect.value = currentBulkEvent;
+
+  updateRewardCurrencyLabels();
 }
 
 function getFilteredRewards() {
   const search = document.querySelector("#searchInput").value.toLowerCase();
+  const market = document.querySelector("#rewardMarketFilter").value;
   const eventId = document.querySelector("#eventFilter").value;
   const type = document.querySelector("#typeFilter").value;
 
   return state.rewards.filter(reward => {
+    const campaign = eventById(reward.eventId);
+    const rewardMarket = eventMarket(campaign);
     const playerMatch = String(reward.playerId || "").toLowerCase().includes(search);
-    return playerMatch && (eventId === "all" || reward.eventId === eventId) && (type === "all" || reward.type === type);
+    return playerMatch
+      && (market === "all" || rewardMarket === market)
+      && (eventId === "all" || reward.eventId === eventId)
+      && (type === "all" || reward.type === type);
   }).sort((a, b) => b.date.localeCompare(a.date));
 }
 
@@ -502,16 +527,18 @@ function renderRewards() {
 
   document.querySelector("#rewardTable").innerHTML = filtered.map(reward => {
     const event = eventById(reward.eventId);
+    const market = eventMarket(event);
     return `<tr>
+      <td><span class="market-pill">${market}</span></td>
       <td><div class="player-cell"><span class="avatar">ID</span><div><strong>${escapeHtml(reward.playerId)}</strong></div></div></td>
       <td>${event ? escapeHtml(event.name) : "Unknown"}</td>
       <td><strong>${escapeHtml(reward.description)}</strong><small>${reward.type === "Credit" ? "Free credit" : "Physical gift"} · Qty ${reward.quantity}</small></td>
-      <td><strong>${money.format(rewardCost(reward))}</strong><small>${money.format(reward.unitCost)} each</small></td>
+      <td><strong>${formatMoney(rewardCost(reward), market)}</strong><small>${formatMoney(reward.unitCost, market)} each</small></td>
       <td>${formatDate(reward.date)}</td>
       <td><span class="badge ${reward.status.toLowerCase()}">${reward.status}</span></td>
       <td><button class="delete-button" data-delete-reward="${reward.id}" aria-label="Delete reward" title="Delete reward">×</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="7" class="empty-state">No reward records match these filters.</td></tr>`;
+  }).join("") || `<tr><td colspan="8" class="empty-state">No reward records match these filters.</td></tr>`;
 
   document.querySelector("#recordCount").textContent = `Showing ${filtered.length} of ${state.rewards.length} reward records`;
 }

@@ -646,12 +646,17 @@ function renderPayouts() {
       && (yearFilter === "all" || eventYear(campaign) === yearFilter);
   });
 
+  const filtered = scopedRecords.filter(payout => {
+    const haystack = `${payout.playerBatch || ""} ${payout.reference || ""} ${payout.type || ""}`.toLowerCase();
+    return haystack.includes(search) && (eventId === "all" || payout.eventId === eventId);
+  }).sort((a, b) => b.date.localeCompare(a.date));
+
   const payoutSummary = document.querySelector("#payoutSummary");
   payoutSummary.classList.toggle("market-mode", marketFilter === "all");
 
   if (marketFilter === "all") {
     payoutSummary.innerHTML = MARKET_CODES.map(market => {
-      const records = scopedRecords.filter(payout => eventMarket(eventById(payout.eventId)) === market);
+      const records = filtered.filter(payout => eventMarket(eventById(payout.eventId)) === market);
       const total = records.reduce((sum, payout) => sum + payoutAmount(payout), 0);
       const campaigns = new Set(records.map(payout => payout.eventId)).size;
       return `<article class="payout-summary-card market-summary-card">
@@ -661,19 +666,14 @@ function renderPayouts() {
       </article>`;
     }).join("");
   } else {
-    const paidTotal = scopedRecords.reduce((sum, payout) => sum + payoutAmount(payout), 0);
-    const campaignCount = new Set(scopedRecords.map(payout => payout.eventId)).size;
+    const paidTotal = filtered.reduce((sum, payout) => sum + payoutAmount(payout), 0);
+    const campaignCount = new Set(filtered.map(payout => payout.eventId)).size;
     payoutSummary.innerHTML = [
       ["Actual payout", formatMoney(paidTotal, marketFilter), `${marketFilter} · ${MARKETS[marketFilter].name}`],
-      ["Paid records", scopedRecords.length.toLocaleString(), "Automatically created from rewards"],
-      ["Campaigns", campaignCount.toLocaleString(), "With paid reward records"]
+      ["Paid records", filtered.length.toLocaleString(), "Matches current filters"],
+      ["Campaigns", campaignCount.toLocaleString(), "With matching paid reward records"]
     ].map(([label, value, detail]) => `<article class="payout-summary-card"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join("");
   }
-
-  const filtered = scopedRecords.filter(payout => {
-    const haystack = `${payout.playerBatch || ""} ${payout.reference || ""} ${payout.type || ""}`.toLowerCase();
-    return haystack.includes(search) && (eventId === "all" || payout.eventId === eventId);
-  }).sort((a, b) => b.date.localeCompare(a.date));
 
   document.querySelector("#payoutTable").innerHTML = filtered.map(payout => {
     const campaign = eventById(payout.eventId);
@@ -691,7 +691,7 @@ function renderPayouts() {
     </tr>`;
   }).join("") || `<tr><td colspan="9" class="empty-state">No payout records match these filters.</td></tr>`;
 
-  document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${payoutRecords.length} payout records`;
+  document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${filtered.length} payout records matching current filters`;
 }
 
 function normalizeBulkHeader(value) {

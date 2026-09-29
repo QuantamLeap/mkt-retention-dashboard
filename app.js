@@ -24,6 +24,7 @@ const seedData = {
 let state = loadState();
 let editingEventId = null;
 let selectedEventYear = null;
+let selectedOverviewYear = null;
 let bulkImportRows = [];
 let bulkImportFileName = "";
 
@@ -102,7 +103,39 @@ function ensureSelectedEventYear() {
   selectedEventYear = years.includes(currentYear) ? currentYear : years[0];
 }
 
+function ensureSelectedOverviewYear() {
+  const years = availableEventYears();
+  if (!years.length) { selectedOverviewYear = "all"; return; }
+  if (selectedOverviewYear === "all" || years.includes(String(selectedOverviewYear))) return;
+  const currentYear = String(new Date().getFullYear());
+  selectedOverviewYear = years.includes(currentYear) ? currentYear : years[0];
+}
+
+function getOverviewEvents() {
+  ensureSelectedOverviewYear();
+  return state.events.filter(event => selectedOverviewYear === "all" || eventYear(event) === String(selectedOverviewYear));
+}
+
+function getOverviewRewards(events = getOverviewEvents()) {
+  const ids = new Set(events.map(event => event.id));
+  return state.rewards.filter(reward => ids.has(reward.eventId));
+}
+
+function renderOverviewYearTabs() {
+  ensureSelectedOverviewYear();
+  const years = availableEventYears();
+  document.querySelector("#overviewYearTabs").innerHTML = [
+    ...years.map(year => `<button type="button" class="year-tab ${String(selectedOverviewYear) === year ? "active" : ""}" data-overview-year="${year}">${year}</button>`),
+    `<button type="button" class="year-tab ${selectedOverviewYear === "all" ? "active" : ""}" data-overview-year="all">All Years</button>`
+  ].join("");
+
+  document.querySelector("#overviewPeriodLabel").textContent = selectedOverviewYear === "all"
+    ? "All years campaign activity"
+    : `${selectedOverviewYear} campaign activity`;
+}
+
 function render() {
+  renderOverviewYearTabs();
   renderMetrics();
   renderCostChart();
   renderRewardMix();
@@ -114,36 +147,69 @@ function render() {
 }
 
 function renderMetrics() {
-  const paid = state.events.reduce((sum, campaign) => sum + eventPaidPayout(campaign.id), 0);
-  const recipients = new Set(state.rewards.map(reward => reward.playerId)).size;
-  const planned = state.events.filter(event => event.status === "Planned").length;
+  const events = getOverviewEvents();
+  const rewards = getOverviewRewards(events);
+  const paid = rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const recipients = new Set(rewards.map(reward => reward.playerId)).size;
+  const planned = events.filter(event => event.status === "Planned").length;
+  const periodLabel = selectedOverviewYear === "all" ? "selected years" : selectedOverviewYear;
   const metrics = [
-    ["Actual payout", money.format(paid), `${state.rewards.length} paid reward records`, "RM", "#28755a"],
-    ["Unique recipients", recipients.toLocaleString(), "Across all festival events", "◎", "#3d6781"],
-    ["Events tracked", state.events.length, `${planned} planned`, "◇", "#a56c19"]
+    ["Actual payout", money.format(paid), `${rewards.length} paid reward records in ${periodLabel}`, "RM", "#28755a"],
+    ["Unique recipients", recipients.toLocaleString(), `Across ${events.length} festival event${events.length === 1 ? "" : "s"}`, "◎", "#3d6781"],
+    ["Events tracked", events.length, `${planned} planned`, "◇", "#a56c19"]
   ];
   document.querySelector("#metricGrid").innerHTML = metrics.map(([label, value, detail, symbol, tone]) => `
     <article class="metric-card" style="--tone:${tone}"><div class="metric-label"><span>${label}</span><span class="metric-symbol">${symbol}</span></div><div class="metric-value">${value}</div><div class="metric-detail">${detail}</div></article>`).join("");
 }
 
 function renderCostChart() {
-  const values = state.events.map(event => ({ event, cost: eventPaidPayout(event.id) }));
+  const events = getOverviewEvents();
+  let values = [];
+
+  if (selectedOverviewYear === "all") {
+    values = availableEventYears().slice().sort((a, b) => Number(a) - Number(b)).map(year => {
+      const yearEvents = state.events.filter(event => eventYear(event) === year);
+      const ids = new Set(yearEvents.map(event => event.id));
+      const cost = state.rewards.filter(reward => ids.has(reward.eventId)).reduce((sum, reward) => sum + rewardCost(reward), 0);
+      return { label: year, cost };
+    });
+    document.querySelector("#payoutChartEyebrow").textContent = "PAYOUT BY YEAR";
+    document.querySelector("#payoutChartTitle").textContent = "Annual payout";
+  } else {
+    const festivalOrder = ["CNY", "Hari Raya", "Mid-Autumn", "Diwali", "Christmas", "Other"];
+    const festivals = [...new Set(events.map(event => event.festival))].sort((a, b) => {
+      const ai = festivalOrder.indexOf(a); const bi = festivalOrder.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b);
+    });
+    values = festivals.map(festival => {
+      const festivalEvents = events.filter(event => event.festival === festival);
+      const ids = new Set(festivalEvents.map(event => event.id));
+      const cost = state.rewards.filter(reward => ids.has(reward.eventId)).reduce((sum, reward) => sum + rewardCost(reward), 0);
+      return { label: festival, cost };
+    });
+    document.querySelector("#payoutChartEyebrow").textContent = "PAYOUT BY FESTIVAL";
+    document.querySelector("#payoutChartTitle").textContent = `${selectedOverviewYear} festival payout`;
+  }
+
+  const total = values.reduce((sum, item) => sum + item.cost, 0);
   const max = Math.max(...values.map(item => item.cost), 1);
-  const average = values.reduce((sum, item) => sum + item.cost, 0) / Math.max(values.length, 1);
-  document.querySelector("#averageCost").textContent = `Average ${money.format(average)}`;
-  document.querySelector("#costChart").innerHTML = values.map(({ event, cost }) => `
-    <div class="bar-column" title="${escapeHtml(event.name)}: ${money.format(cost)}"><span class="bar-value">${money.format(cost)}</span><div class="bar" style="height:${Math.max((cost / max) * 150, 4)}px"></div><span class="bar-label">${escapeHtml(event.festival)}</span></div>`).join("");
+  document.querySelector("#averageCost").textContent = `Total ${money.format(total)}`;
+  document.querySelector("#costChart").innerHTML = values.length
+    ? values.map(({ label, cost }) => `
+      <div class="bar-column" title="${escapeHtml(label)}: ${money.format(cost)}"><span class="bar-value">${money.format(cost)}</span><div class="bar" style="height:${Math.max((cost / max) * 150, 4)}px"></div><span class="bar-label">${escapeHtml(label)}</span></div>`).join("")
+    : `<div class="chart-empty-state">No payout data for this period.</div>`;
 }
 
 function renderRewardMix() {
-  const total = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
-  const credit = state.rewards.filter(reward => reward.type === "Credit").reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const rewards = getOverviewRewards();
+  const total = rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+  const credit = rewards.filter(reward => reward.type === "Credit").reduce((sum, reward) => sum + rewardCost(reward), 0);
   const physical = total - credit;
   const creditPct = total ? Math.round(credit / total * 100) : 0;
   document.querySelector("#rewardMix").innerHTML = `
     <div class="mix-total"><strong>${money.format(total)}</strong><span>Total paid out</span></div>
     <div class="mix-row"><div class="mix-line"><span>Free credits</span><span>${creditPct}% · ${money.format(credit)}</span></div><div class="mix-track"><div class="mix-fill" style="width:${creditPct}%"></div></div></div>
-    <div class="mix-row"><div class="mix-line"><span>Physical gifts</span><span>${100 - creditPct}% · ${money.format(physical)}</span></div><div class="mix-track"><div class="mix-fill physical" style="width:${100 - creditPct}%"></div></div></div>`;
+    <div class="mix-row"><div class="mix-line"><span>Physical gifts</span><span>${total ? 100 - creditPct : 0}% · ${money.format(physical)}</span></div><div class="mix-track"><div class="mix-fill physical" style="width:${total ? 100 - creditPct : 0}%"></div></div></div>`;
 }
 
 function eventRow(event) {
@@ -151,7 +217,10 @@ function eventRow(event) {
 }
 
 function renderOverviewEvents() {
-  document.querySelector("#overviewEvents").innerHTML = state.events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="6" class="empty-state">No events yet.</td></tr>`;
+  const events = getOverviewEvents()
+    .slice()
+    .sort((a, b) => String(b.festivalDate || "").localeCompare(String(a.festivalDate || "")));
+  document.querySelector("#overviewEvents").innerHTML = events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="6" class="empty-state">No events for this period.</td></tr>`;
 }
 
 function renderEventGrid() {
@@ -621,6 +690,16 @@ document.addEventListener("click", event => {
     renderEventGrid();
   }
 
+  const overviewYearButton = event.target.closest("[data-overview-year]");
+  if (overviewYearButton) {
+    selectedOverviewYear = overviewYearButton.dataset.overviewYear;
+    renderOverviewYearTabs();
+    renderMetrics();
+    renderCostChart();
+    renderRewardMix();
+    renderOverviewEvents();
+  }
+
   if (event.target.closest("#openBulkRewardButton, .open-bulk-reward")) openBulkRewardDialog();
   if (event.target.closest("#downloadBulkTemplateButton")) downloadBulkRewardTemplate();
   if (event.target.closest("#openClearRecordsButton")) openClearRecordsDialog();
@@ -662,6 +741,7 @@ document.querySelector("#eventForm").addEventListener("submit", event => {
     if (index === -1) { showToast("Campaign could not be found"); return; }
     state.events[index] = { ...state.events[index], ...values, budget: Number(values.budget) };
     selectedEventYear = eventYear(state.events[index]) || selectedEventYear;
+    selectedOverviewYear = eventYear(state.events[index]) || selectedOverviewYear;
     saveState();
     document.querySelector("#eventDialog").close();
     render();
@@ -672,6 +752,7 @@ document.querySelector("#eventForm").addEventListener("submit", event => {
   const newEvent = { ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) };
   state.events.unshift(newEvent);
   selectedEventYear = eventYear(newEvent) || selectedEventYear;
+  selectedOverviewYear = eventYear(newEvent) || selectedOverviewYear;
   saveState();
   document.querySelector("#eventDialog").close();
   render();

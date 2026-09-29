@@ -595,40 +595,62 @@ function deleteAllRewards() {
 
 function renderPayouts() {
   const search = document.querySelector("#payoutSearchInput").value.toLowerCase();
+  const marketFilter = document.querySelector("#payoutMarketFilter").value;
+  const yearFilter = document.querySelector("#payoutYearFilter").value;
   const eventId = document.querySelector("#payoutEventFilter").value;
   const payoutRecords = allPayoutRecords();
 
-  const paidTotal = payoutRecords.reduce((sum, payout) => sum + payoutAmount(payout), 0);
-  const campaignCount = new Set(payoutRecords.map(payout => payout.eventId)).size;
+  const scopedRecords = payoutRecords.filter(payout => {
+    const campaign = eventById(payout.eventId);
+    const market = eventMarket(campaign);
+    return (marketFilter === "all" || market === marketFilter)
+      && (yearFilter === "all" || eventYear(campaign) === yearFilter);
+  });
 
-  document.querySelector("#payoutSummary").innerHTML = [
-    ["Actual payout", money.format(paidTotal), "All issued rewards"],
-    ["Paid records", payoutRecords.length.toLocaleString(), "Automatically created from rewards"],
-    ["Campaigns", campaignCount.toLocaleString(), "With paid reward records"]
-  ].map(([label, value, detail]) => `<article class="payout-summary-card"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join("");
+  if (marketFilter === "all") {
+    document.querySelector("#payoutSummary").innerHTML = MARKET_CODES.map(market => {
+      const records = scopedRecords.filter(payout => eventMarket(eventById(payout.eventId)) === market);
+      const total = records.reduce((sum, payout) => sum + payoutAmount(payout), 0);
+      const campaigns = new Set(records.map(payout => payout.eventId)).size;
+      return `<article class="payout-summary-card market-summary-card">
+        <span><b class="market-pill">${market}</b> ${MARKETS[market].name}</span>
+        <strong>${formatMoney(total, market)}</strong>
+        <small>${records.length} paid record${records.length === 1 ? "" : "s"} · ${campaigns} campaign${campaigns === 1 ? "" : "s"}</small>
+      </article>`;
+    }).join("");
+  } else {
+    const paidTotal = scopedRecords.reduce((sum, payout) => sum + payoutAmount(payout), 0);
+    const campaignCount = new Set(scopedRecords.map(payout => payout.eventId)).size;
+    document.querySelector("#payoutSummary").innerHTML = [
+      ["Actual payout", formatMoney(paidTotal, marketFilter), `${marketFilter} · ${MARKETS[marketFilter].name}`],
+      ["Paid records", scopedRecords.length.toLocaleString(), "Automatically created from rewards"],
+      ["Campaigns", campaignCount.toLocaleString(), "With paid reward records"]
+    ].map(([label, value, detail]) => `<article class="payout-summary-card"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join("");
+  }
 
-  const filtered = payoutRecords.filter(payout => {
+  const filtered = scopedRecords.filter(payout => {
     const haystack = `${payout.playerBatch || ""} ${payout.reference || ""} ${payout.type || ""}`.toLowerCase();
     return haystack.includes(search) && (eventId === "all" || payout.eventId === eventId);
   }).sort((a, b) => b.date.localeCompare(a.date));
 
   document.querySelector("#payoutTable").innerHTML = filtered.map(payout => {
     const campaign = eventById(payout.eventId);
+    const market = eventMarket(campaign);
     return `<tr>
+      <td><span class="market-pill">${market}</span></td>
       <td>${formatDate(payout.date)}</td>
-      <td><strong>${campaign ? escapeHtml(campaign.name) : "Unknown"}</strong></td>
+      <td><strong>${campaign ? escapeHtml(campaign.name) : "Unknown"}</strong><small>${campaign ? escapeHtml(campaign.festival) : ""}</small></td>
       <td><strong>${escapeHtml(payout.playerBatch || "—")}</strong><small>${escapeHtml(payout.type)}</small></td>
-      <td><strong>${money.format(payoutAmount(payout))}</strong><small>Qty ${Number(payout.quantity) || 1}</small></td>
+      <td><strong>${formatMoney(payoutAmount(payout), market)}</strong><small>Qty ${Number(payout.quantity) || 1}</small></td>
       <td>${escapeHtml(payout.reference || "—")}</td>
       <td><span class="badge paid">Paid</span></td>
       <td>Auto from Issue Reward</td>
       <td><button class="delete-button" data-delete-reward="${payout.sourceRewardId}" aria-label="Delete issued reward" title="Delete issued reward">×</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="8" class="empty-state">No payout records match these filters.</td></tr>`;
+  }).join("") || `<tr><td colspan="9" class="empty-state">No payout records match these filters.</td></tr>`;
 
   document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${payoutRecords.length} payout records`;
 }
-
 
 function normalizeBulkHeader(value) {
   return String(value || "")

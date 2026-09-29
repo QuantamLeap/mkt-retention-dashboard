@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260929-20">
+  <link rel="stylesheet" href="styles.css?v=20260929-21">
 </head>
 <body>
   <div class="app-shell">
@@ -42,6 +42,7 @@
             <div class="overview-period-control">
               <span class="eyebrow">CURRENT VIEW</span>
               <strong id="overviewPeriodLabel">Campaign activity</strong>
+              <div class="market-tabs overview-market-tabs" id="overviewMarketTabs" aria-label="Filter overview by market"></div>
               <div class="event-year-tabs overview-year-tabs" id="overviewYearTabs" aria-label="Filter overview by year"></div>
             </div>
             <button class="button secondary" id="openEventButton">＋ New event</button>
@@ -69,7 +70,7 @@
               <div><span class="eyebrow">ACTIVE & RECENT</span><h2>Festival events</h2></div>
               <button class="text-button" data-go-view="events">View all →</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Event</th><th>Festival Date</th><th>Recipients</th><th>Budget</th><th>Paid Out</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Market</th><th>Event</th><th>Festival Date</th><th>Recipients</th><th>Budget</th><th>Paid Out</th><th>Status</th></tr></thead><tbody id="overviewEvents"></tbody></table></div>
           </section>
         </section>
 
@@ -79,6 +80,7 @@
             <button class="button primary open-event">＋ New event</button>
           </div>
 
+          <div class="market-tabs" id="eventMarketTabs" aria-label="Filter events by market"></div>
           <div class="event-year-tabs" id="eventYearTabs" aria-label="Filter events by year"></div>
 
           <div class="event-filter-row">
@@ -118,13 +120,16 @@
               <button class="button primary open-reward">＋ Issue reward</button>
             </div>
           </div>
-          <div class="filters">
+          <div class="filters reward-filters">
             <label class="search-field"><span>⌕</span><input id="searchInput" type="search" placeholder="Search player ID"></label>
+            <select id="rewardMarketFilter" aria-label="Filter rewards by market">
+              <option value="all">All markets</option><option value="MY">MY</option><option value="SG">SG</option><option value="ID">ID</option><option value="TH">TH</option><option value="MX">MX</option>
+            </select>
             <select id="eventFilter" aria-label="Filter by event"><option value="all">All events</option></select>
             <select id="typeFilter" aria-label="Filter by reward type"><option value="all">All reward types</option><option value="Credit">Free credit</option><option value="Physical">Physical gift</option></select>
           </div>
           <section class="panel table-panel records-panel">
-            <div class="table-wrap"><table><thead><tr><th>Player</th><th>Event</th><th>Reward</th><th>Value</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="rewardTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Market</th><th>Player</th><th>Event</th><th>Reward</th><th>Value</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="rewardTable"></tbody></table></div>
             <div class="table-footer" id="recordCount"></div>
           </section>
         </section>
@@ -134,12 +139,16 @@
             <div><span class="eyebrow">CAMPAIGN FINANCE</span><h2>Payout ledger</h2><p class="section-note">Every issued reward is automatically recorded here as Paid Out.</p></div>
           </div>
           <div class="payout-summary" id="payoutSummary"></div>
-          <div class="filters payout-filters payout-filters-simple">
+          <div class="filters payout-filters">
             <label class="search-field"><span>⌕</span><input id="payoutSearchInput" type="search" placeholder="Search player ID or reward"></label>
+            <select id="payoutMarketFilter" aria-label="Filter payout by market">
+              <option value="all">All markets</option><option value="MY">MY</option><option value="SG">SG</option><option value="ID">ID</option><option value="TH">TH</option><option value="MX">MX</option>
+            </select>
+            <select id="payoutYearFilter" aria-label="Filter payout by year"><option value="all">All years</option></select>
             <select id="payoutEventFilter" aria-label="Filter payout by campaign"><option value="all">All campaigns</option></select>
           </div>
           <section class="panel table-panel records-panel">
-            <div class="table-wrap"><table><thead><tr><th>Date</th><th>Campaign</th><th>Player / Batch</th><th>Amount</th><th>Reward</th><th>Status</th><th>Recorded By</th><th></th></tr></thead><tbody id="payoutTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Market</th><th>Date</th><th>Campaign</th><th>Player ID</th><th>Amount</th><th>Reward</th><th>Status</th><th>Recorded By</th><th></th></tr></thead><tbody id="payoutTable"></tbody></table></div>
             <div class="table-footer" id="payoutRecordCount"></div>
           </section>
         </section>
@@ -152,10 +161,11 @@
       <div class="dialog-header"><div><span class="eyebrow" id="eventDialogEyebrow">NEW CAMPAIGN</span><h2 id="eventDialogTitle">Create festival event</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
       <div class="form-grid">
         <label class="full">Event name<input name="name" required placeholder="e.g. Hari Raya Celebration"></label>
+        <label>Market<select name="market" id="eventMarketSelect" required><option value="MY">MY · Malaysia</option><option value="SG">SG · Singapore</option><option value="ID">ID · Indonesia</option><option value="TH">TH · Thailand</option><option value="MX">MX · Mexico</option></select></label>
         <label>Festival<select name="festival" required><option>CNY</option><option>Christmas</option><option>Diwali</option><option>Hari Raya</option><option>Mid-Autumn</option><option>Other</option></select></label>
         <label>Status<select name="status"><option>Unplan</option><option>Planned</option><option>Completed</option></select></label>
         <label class="full">Festival date<input name="festivalDate" type="date" required></label>
-        <label class="full">Budget (RM)<input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
+        <label class="full"><span id="eventBudgetLabel">Budget (MYR)</span><input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
       </div>
       <div class="dialog-actions"><button class="button danger hidden" id="deleteEventButton" type="button">Delete event</button><button class="button secondary close-dialog" type="button">Cancel</button><button class="button primary" id="eventSubmitButton" type="submit">Create event</button></div>
     </form>
@@ -170,7 +180,7 @@
         <label>Reward type<select name="type" id="rewardType"><option value="Credit">Free credit</option><option value="Physical">Physical gift</option></select></label>
         <label>Reward description<input name="description" required value="Bonus credits"></label>
         <label>Quantity<input name="quantity" type="number" min="1" step="1" value="1" required></label>
-        <label>Unit cost (RM)<input name="unitCost" type="number" min="0" step="0.01" required placeholder="50"></label>
+        <label><span id="rewardUnitCostLabel">Unit cost (MYR)</span><input name="unitCost" type="number" min="0" step="0.01" required placeholder="50"></label>
         <label>Date issued<input name="date" type="date" required></label>
         <label>Fulfilment<select name="status"><option>Issued</option><option>Pending</option><option>Delivered</option></select></label>
       </div>
@@ -198,7 +208,7 @@
           </div>
           <div class="clear-record-stats">
             <strong id="clearFilteredCount">0</strong>
-            <span>records · <b id="clearFilteredValue">RM0</b></span>
+            <span>records · <b id="clearFilteredValue">—</b></span>
           </div>
           <button class="button danger" id="deleteFilteredRewardsButton" type="button">Delete filtered records</button>
         </section>
@@ -211,7 +221,7 @@
           </div>
           <div class="clear-record-stats">
             <strong id="clearAllCount">0</strong>
-            <span>records · <b id="clearAllValue">RM0</b></span>
+            <span>records · <b id="clearAllValue">—</b></span>
           </div>
           <button class="button danger" id="deleteAllRewardsButton" type="button">Delete all records</button>
         </section>
@@ -248,7 +258,7 @@
 
       <div class="bulk-template-columns">
         <span>Template columns:</span>
-        <code>Player ID</code><code>Reward Type</code><code>Reward Description</code><code>Quantity</code><code>Unit Cost (RM)</code><code>Date Issued</code><code>Status</code>
+        <code>Player ID</code><code>Reward Type</code><code>Reward Description</code><code>Quantity</code><code>Unit Cost</code><code>Date Issued</code><code>Status</code>
       </div>
 
       <div class="bulk-preview-header">
@@ -263,7 +273,7 @@
         </table>
       </div>
 
-      <div class="bulk-import-note">Rows with validation errors will be skipped. Identical rows are allowed because each row is treated as a separate reward issuance. Every successfully imported reward is automatically recorded as Paid Out.</div>
+      <div class="bulk-import-note">Rows with validation errors will be skipped. Identical rows are allowed because each row is treated as a separate reward issuance. Unit Cost follows the selected campaign's market currency. Every successfully imported reward is automatically recorded as Paid Out.</div>
       <div class="dialog-actions">
         <button class="button secondary close-dialog" type="button">Cancel</button>
         <button class="button primary" id="confirmBulkImportButton" type="button" disabled>Import valid rows</button>
@@ -273,8 +283,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="shared-storage.js?v=20260929-20"></script>
-  <script src="app.js?v=20260929-20"></script>
-  <!-- deployment-sync-20260929-20 -->
+  <script src="shared-storage.js?v=20260929-21"></script>
+  <script src="app.js?v=20260929-21"></script>
+  <!-- deployment-sync-20260929-21 -->
 </body>
 </html>

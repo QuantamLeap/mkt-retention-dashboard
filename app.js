@@ -388,7 +388,7 @@ function renderCostChart() {
     document.querySelector("#payoutChartEyebrow").textContent = "PAYOUT BY YEAR";
     document.querySelector("#payoutChartTitle").textContent = `${selectedOverviewMarket} annual payout`;
   } else {
-    const festivalOrder = ["CNY", "Hari Raya", "Mid-Autumn", "Diwali", "Christmas", "Other"];
+    const festivalOrder = festivalListForMarket(selectedOverviewMarket);
     const festivals = [...new Set(events.map(event => event.festival))].sort((a, b) => {
       const ai = festivalOrder.indexOf(a); const bi = festivalOrder.indexOf(b);
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b);
@@ -458,7 +458,13 @@ function renderEventGrid() {
     `<button type="button" class="year-tab ${selectedEventYear === "all" ? "active" : ""}" data-event-year="all">All Years</button>`
   ].join("");
 
-  const festival = document.querySelector("#eventFestivalFilter").value;
+  const festivalFilter = document.querySelector("#eventFestivalFilter");
+  const currentFestival = festivalFilter.value;
+  const availableFestivals = festivalListForMarket(selectedEventMarket);
+  festivalFilter.innerHTML = `<option value="all">All Festivals</option>${availableFestivals.map(festival => `<option value="${escapeHtml(festival)}">${escapeHtml(festival)}</option>`).join("")}`;
+  festivalFilter.value = ["all", ...availableFestivals].includes(currentFestival) ? currentFestival : "all";
+
+  const festival = festivalFilter.value;
   const status = document.querySelector("#eventStatusFilter").value;
 
   const filteredEvents = state.events

@@ -675,10 +675,11 @@ function renderPayouts() {
     ].map(([label, value, detail]) => `<article class="payout-summary-card"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join("");
   }
 
-  document.querySelector("#payoutTable").innerHTML = filtered.map(payout => {
+  document.querySelector("#payoutTable").innerHTML = filtered.map((payout, index) => {
     const campaign = eventById(payout.eventId);
     const market = eventMarket(campaign);
     return `<tr>
+      <td><strong>${index + 1}</strong></td>
       <td><span class="market-pill">${market}</span></td>
       <td>${formatDate(payout.date)}</td>
       <td><strong>${campaign ? escapeHtml(campaign.name) : "Unknown"}</strong><small>${campaign ? escapeHtml(campaign.festival) : ""}</small></td>
@@ -689,7 +690,7 @@ function renderPayouts() {
       <td>Auto from Issue Reward</td>
       <td><button class="delete-button" data-delete-reward="${payout.sourceRewardId}" aria-label="Delete issued reward" title="Delete issued reward">×</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="9" class="empty-state">No payout records match these filters.</td></tr>`;
+  }).join("") || `<tr><td colspan="10" class="empty-state">No payout records match these filters.</td></tr>`;
 
   document.querySelector("#payoutRecordCount").textContent = `Showing ${filtered.length} of ${filtered.length} payout records matching current filters`;
 }

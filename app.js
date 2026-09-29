@@ -2,11 +2,11 @@ const STORAGE_KEY = "retainly-dashboard-v1";
 
 const seedData = {
   events: [
-    { id: "evt-cny", name: "CNY Lucky Rewards", festival: "CNY", festivalDate: "2026-02-17", budget: 18000, status: "Completed" },
-    { id: "evt-raya", name: "Hari Raya Appreciation", festival: "Hari Raya", festivalDate: "2026-03-20", budget: 12500, status: "Completed" },
-    { id: "evt-diwali", name: "Diwali Festival of Wins", festival: "Diwali", festivalDate: "2026-11-08", budget: 15000, status: "Planned" },
-    { id: "evt-xmas", name: "Christmas Countdown", festival: "Christmas", festivalDate: "2026-12-25", budget: 22000, status: "Planned" },
-    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", festivalDate: "2026-09-25", budget: 9000, status: "Planned" }
+    { id: "evt-cny", name: "CNY Lucky Rewards", festival: "CNY", festivalDate: "2026-02-17", budget: 18000, status: "Completed", market: "MY" },
+    { id: "evt-raya", name: "Hari Raya Appreciation", festival: "Hari Raya", festivalDate: "2026-03-20", budget: 12500, status: "Completed", market: "MY" },
+    { id: "evt-diwali", name: "Diwali Festival of Wins", festival: "Diwali", festivalDate: "2026-11-08", budget: 15000, status: "Planned", market: "MY" },
+    { id: "evt-xmas", name: "Christmas Countdown", festival: "Christmas", festivalDate: "2026-12-25", budget: 22000, status: "Planned", market: "MY" },
+    { id: "evt-moon", name: "Mid-Autumn VIP Night", festival: "Mid-Autumn", festivalDate: "2026-09-25", budget: 9000, status: "Planned", market: "MY" }
   ],
   rewards: [
     { id: "r1", playerId: "PL-1042", playerName: "Alicia Tan", tier: "VIP", eventId: "evt-cny", type: "Credit", description: "Lucky bonus credits", quantity: 1, unitCost: 288, date: "2026-02-08", status: "Issued" },
@@ -27,12 +27,48 @@ const sharedStorage = window.RetentionSharedStorage;
 let sharedStorageReady = false;
 let editingEventId = null;
 let selectedEventYear = null;
+let selectedEventMarket = "MY";
 let selectedOverviewYear = null;
+let selectedOverviewMarket = "MY";
 let bulkImportRows = [];
 let bulkImportFileName = "";
 
-const money = new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR", currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 });
+const MARKETS = {
+  MY: { name: "Malaysia", currency: "MYR", locale: "en-MY" },
+  SG: { name: "Singapore", currency: "SGD", locale: "en-SG" },
+  ID: { name: "Indonesia", currency: "IDR", locale: "id-ID" },
+  TH: { name: "Thailand", currency: "THB", locale: "th-TH" },
+  MX: { name: "Mexico", currency: "MXN", locale: "es-MX" }
+};
+const MARKET_CODES = Object.keys(MARKETS);
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+function marketCurrency(market) {
+  return MARKETS[market]?.currency || "MYR";
+}
+function formatMoney(value, market = "MY") {
+  const config = MARKETS[market] || MARKETS.MY;
+  return new Intl.NumberFormat(config.locale, {
+    style: "currency",
+    currency: config.currency,
+    currencyDisplay: "narrowSymbol",
+    maximumFractionDigits: 0
+  }).format(Number(value) || 0);
+}
+function eventMarket(event) {
+  return MARKET_CODES.includes(event?.market) ? event.market : "MY";
+}
+function formatMarketTotals(rewards) {
+  const totals = {};
+  rewards.forEach(reward => {
+    const market = eventMarket(eventById(reward.eventId));
+    totals[market] = (totals[market] || 0) + rewardCost(reward);
+  });
+  return MARKET_CODES
+    .filter(market => totals[market])
+    .map(market => `${market} ${formatMoney(totals[market], market)}`)
+    .join(" · ") || "—";
+}
 
 function normalizeEvent(event) {
   const { startDate, endDate, ...rest } = event;
@@ -44,6 +80,7 @@ function normalizeEvent(event) {
 
   return {
     ...rest,
+    market: MARKET_CODES.includes(event.market) ? event.market : "MY",
     status,
     festivalDate: event.festivalDate || startDate || endDate || ""
   };

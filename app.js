@@ -225,7 +225,7 @@ function availableEventYears() {
   return [...new Set(state.events.map(eventYear).filter(Boolean))].sort((a, b) => Number(b) - Number(a));
 }
 function ensureSelectedEventYear() {
-  const years = availableEventYears();
+  const years = yearsForMarket(selectedEventMarket);
   if (!years.length) { selectedEventYear = "all"; return; }
   if (selectedEventYear === "all" || years.includes(String(selectedEventYear))) return;
   const currentYear = String(new Date().getFullYear());
@@ -422,7 +422,12 @@ function renderOverviewEvents() {
 function renderEventGrid() {
   ensureSelectedEventYear();
 
-  const years = availableEventYears();
+  document.querySelector("#eventMarketTabs").innerHTML = [
+    ...MARKET_CODES.map(market => `<button type="button" class="market-tab ${selectedEventMarket === market ? "active" : ""}" data-event-market="${market}">${market}</button>`),
+    `<button type="button" class="market-tab ${selectedEventMarket === "all" ? "active" : ""}" data-event-market="all">All Markets</button>`
+  ].join("");
+
+  const years = yearsForMarket(selectedEventMarket);
   const yearTabs = document.querySelector("#eventYearTabs");
   yearTabs.innerHTML = [
     ...years.map(year => `<button type="button" class="year-tab ${String(selectedEventYear) === year ? "active" : ""}" data-event-year="${year}">${year}</button>`),
@@ -433,6 +438,7 @@ function renderEventGrid() {
   const status = document.querySelector("#eventStatusFilter").value;
 
   const filteredEvents = state.events
+    .filter(event => selectedEventMarket === "all" || eventMarket(event) === selectedEventMarket)
     .filter(event => selectedEventYear === "all" || eventYear(event) === String(selectedEventYear))
     .filter(event => festival === "all" || event.festival === festival)
     .filter(event => status === "all" || event.status === status)
@@ -442,23 +448,25 @@ function renderEventGrid() {
 
   document.querySelector("#eventGrid").innerHTML = filteredEvents.map(event => {
     const paid = eventPaidPayout(event.id);
+    const market = eventMarket(event);
     return `<article class="event-card">
       <div class="event-card-top">
         <div class="festival-mark">${escapeHtml(event.festival.slice(0, 3).toUpperCase())}</div>
         <div class="event-card-actions">
+          <span class="market-pill">${market}</span>
           <span class="badge ${event.status.toLowerCase()}">${event.status}</span>
           <button class="event-edit-button" type="button" data-edit-event="${escapeHtml(event.id)}">Edit</button>
         </div>
       </div>
       <h3>${escapeHtml(event.name)}</h3>
-      <p>Festival date · ${formatDate(event.festivalDate)}</p>
+      <p>${MARKETS[market].name} · Festival date · ${formatDate(event.festivalDate)}</p>
       <div class="event-stats event-stats-three">
         <div class="event-stat"><span>Recipients</span><strong>${eventRecipients(event.id)}</strong></div>
-        <div class="event-stat"><span>Budget</span><strong>${money.format(Number(event.budget) || 0)}</strong></div>
-        <div class="event-stat"><span>Paid out</span><strong>${money.format(paid)}</strong></div>
+        <div class="event-stat"><span>Budget</span><strong>${formatMoney(Number(event.budget) || 0, market)}</strong></div>
+        <div class="event-stat"><span>Paid out</span><strong>${formatMoney(paid, market)}</strong></div>
       </div>
     </article>`;
-  }).join("") || `<div class="event-empty-state"><strong>No events found</strong><span>Try another year, festival, or status filter.</span></div>`;
+  }).join("") || `<div class="event-empty-state"><strong>No events found</strong><span>Try another market, year, festival, or status filter.</span></div>`;
 }
 
 function renderSelects() {

@@ -545,13 +545,11 @@ function renderRewards() {
 
 function updateClearRecordsDialog() {
   const filtered = getFilteredRewards();
-  const filteredValue = filtered.reduce((sum, reward) => sum + rewardCost(reward), 0);
-  const totalValue = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
 
   document.querySelector("#clearFilteredCount").textContent = filtered.length.toLocaleString();
-  document.querySelector("#clearFilteredValue").textContent = money.format(filteredValue);
+  document.querySelector("#clearFilteredValue").textContent = formatMarketTotals(filtered);
   document.querySelector("#clearAllCount").textContent = state.rewards.length.toLocaleString();
-  document.querySelector("#clearAllValue").textContent = money.format(totalValue);
+  document.querySelector("#clearAllValue").textContent = formatMarketTotals(state.rewards);
 
   document.querySelector("#deleteFilteredRewardsButton").disabled = filtered.length === 0;
   document.querySelector("#deleteAllRewardsButton").disabled = state.rewards.length === 0;
@@ -566,10 +564,9 @@ function deleteFilteredRewards() {
   const filtered = getFilteredRewards();
   if (!filtered.length) { showToast("No filtered reward records to delete"); return; }
 
-  const value = filtered.reduce((sum, reward) => sum + rewardCost(reward), 0);
   const eventId = document.querySelector("#eventFilter").value;
   const eventName = eventId === "all" ? "the current filtered view" : (eventById(eventId)?.name || "the selected campaign");
-  const message = `Delete ${filtered.length} reward record${filtered.length === 1 ? "" : "s"} from ${eventName}? This will also remove ${money.format(value)} from Paid Out. This cannot be undone.`;
+  const message = `Delete ${filtered.length} reward record${filtered.length === 1 ? "" : "s"} from ${eventName}? This will also remove ${formatMarketTotals(filtered)} from Paid Out. This cannot be undone.`;
 
   if (!confirm(message)) return;
 
@@ -585,8 +582,7 @@ function deleteAllRewards() {
   if (!state.rewards.length) { showToast("There are no reward records to delete"); return; }
 
   const count = state.rewards.length;
-  const value = state.rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
-  const message = `Delete all ${count} reward records? This will also remove ${money.format(value)} from Paid Out across all campaigns. This cannot be undone.`;
+  const message = `Delete all ${count} reward records? This will also remove ${formatMarketTotals(state.rewards)} from Paid Out across all campaigns. This cannot be undone.`;
 
   if (!confirm(message)) return;
 

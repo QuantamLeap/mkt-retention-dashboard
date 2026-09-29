@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-18">
+  <link rel="stylesheet" href="styles.css?v=20260929-19">
 </head>
 <body>
   <div class="app-shell">
@@ -38,8 +38,12 @@
 
       <div class="content">
         <section class="view active" id="overviewView">
-          <div class="period-row">
-            <div><span class="eyebrow">CURRENT PERIOD</span><strong>All campaign activity</strong></div>
+          <div class="period-row overview-period-row">
+            <div class="overview-period-control">
+              <span class="eyebrow">CURRENT VIEW</span>
+              <strong id="overviewPeriodLabel">Campaign activity</strong>
+              <div class="event-year-tabs overview-year-tabs" id="overviewYearTabs" aria-label="Filter overview by year"></div>
+            </div>
             <button class="button secondary" id="openEventButton">＋ New event</button>
           </div>
 
@@ -48,7 +52,7 @@
           <div class="dashboard-grid">
             <section class="panel cost-panel">
               <div class="panel-header">
-                <div><span class="eyebrow">ACTUAL PAYOUT BY EVENT</span><h2>Campaign payout</h2></div>
+                <div><span class="eyebrow" id="payoutChartEyebrow">PAYOUT BY FESTIVAL</span><h2 id="payoutChartTitle">Festival payout</h2></div>
                 <span class="panel-meta" id="averageCost"></span>
               </div>
               <div class="bar-chart" id="costChart"></div>
@@ -269,7 +273,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20260928-18"></script>
-  <!-- deployment-sync-20260928-18 -->
+  <script src="app.js?v=20260929-19"></script>
+  <!-- deployment-sync-20260929-19 -->
 </body>
 </html>

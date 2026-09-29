@@ -22,6 +22,8 @@ const seedData = {
 };
 
 let state = loadState();
+const sharedStorage = window.RetentionSharedStorage;
+let sharedStorageReady = false;
 let editingEventId = null;
 let selectedEventYear = null;
 let selectedOverviewYear = null;
@@ -60,7 +62,91 @@ function loadState() {
   }
 }
 
-function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function normalizeDashboardState(raw) {
+  return {
+    events: Array.isArray(raw?.events) ? raw.events.map(normalizeEvent) : [],
+    rewards: Array.isArray(raw?.rewards) ? raw.rewards : [],
+    payouts: Array.isArray(raw?.payouts) ? raw.payouts : []
+  };
+}
+
+function updateStorageStatus(label, detail, tone = "ok") {
+  const title = document.querySelector("#storageStatusTitle");
+  const subtitle = document.querySelector("#storageStatusDetail");
+  const dot = document.querySelector("#storageStatusDot");
+  if (title) title.textContent = label;
+  if (subtitle) subtitle.textContent = detail;
+  if (dot) dot.dataset.tone = tone;
+}
+
+function applySharedState(raw, detail = "Supabase · all devices") {
+  state = normalizeDashboardState(raw);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  render();
+initializeSharedStorage();
+  updateStorageStatus("Shared data synced", detail, "ok");
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!sharedStorageReady || !sharedStorage) return Promise.resolve();
+
+  const snapshot = normalizeDashboardState(state);
+  updateStorageStatus("Saving shared data", "Syncing to Supabase…", "syncing");
+
+  return sharedStorage.save(snapshot).then(() => {
+    updateStorageStatus("Shared data synced", "Supabase · all devices", "ok");
+  }).catch(async error => {
+    console.error("Shared save failed", error);
+    if (error?.status === 409) {
+      try {
+        const latest = await sharedStorage.load();
+        if (latest) {
+          applySharedState(latest, "Another device updated first");
+          showToast("Another device updated the dashboard. Latest shared data loaded.");
+          return;
+        }
+      } catch (refreshError) {
+        console.error("Shared refresh after conflict failed", refreshError);
+      }
+    }
+    updateStorageStatus("Sync problem", "Local copy kept on this device", "error");
+    showToast("Could not sync shared data. Your local copy is still available.");
+  });
+}
+
+async function initializeSharedStorage() {
+  if (!sharedStorage) {
+    updateStorageStatus("Offline local data", "Shared storage client unavailable", "error");
+    return;
+  }
+
+  updateStorageStatus("Connecting shared data", "Supabase · supabase-mkt", "syncing");
+
+  try {
+    const remote = await sharedStorage.load();
+    if (remote) {
+      sharedStorageReady = true;
+      applySharedState(remote);
+    } else {
+      sharedStorageReady = true;
+      await sharedStorage.save(normalizeDashboardState(state));
+      updateStorageStatus("Shared data created", "Supabase · all devices", "ok");
+    }
+
+    sharedStorage.startPolling(nextState => applySharedState(nextState, "Updated from another device"));
+
+    window.addEventListener("focus", () => {
+      sharedStorage.refresh(nextState => applySharedState(nextState, "Updated from another device")).catch(() => {});
+    });
+  } catch (error) {
+    console.error("Shared storage initialization failed", error);
+    sharedStorageReady = false;
+    updateStorageStatus("Offline local data", "Supabase connection unavailable", "error");
+    showToast("Shared database unavailable. Showing this device's saved data.");
+  }
+}
+
 function eventById(id) { return state.events.find(event => event.id === id); }
 function rewardCost(reward) { return Number(reward.quantity) * Number(reward.unitCost); }
 function eventRewardValue(id) { return state.rewards.filter(reward => reward.eventId === id).reduce((sum, reward) => sum + rewardCost(reward), 0); }

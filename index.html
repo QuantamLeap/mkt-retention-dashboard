@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260929-19">
+  <link rel="stylesheet" href="styles.css?v=20260929-20">
 </head>
 <body>
   <div class="app-shell">
@@ -18,8 +18,8 @@
         <button class="nav-item" data-view="payouts"><span class="nav-icon">$</span>Payouts</button>
       </nav>
       <div class="sidebar-note">
-        <span class="status-dot"></span>
-        <div><strong>Records saved</strong><small>Locally on this device</small></div>
+        <span class="status-dot" id="storageStatusDot" data-tone="syncing"></span>
+        <div><strong id="storageStatusTitle">Connecting shared data</strong><small id="storageStatusDetail">Supabase · supabase-mkt</small></div>
       </div>
     </aside>
 
@@ -273,7 +273,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20260929-19"></script>
-  <!-- deployment-sync-20260929-19 -->
+  <script src="shared-storage.js?v=20260929-20"></script>
+  <script src="app.js?v=20260929-20"></script>
+  <!-- deployment-sync-20260929-20 -->
 </body>
 </html>

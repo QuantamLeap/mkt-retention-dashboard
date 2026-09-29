@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f5f1">
   <title>Retainly | Marketing Retention</title>
-  <link rel="stylesheet" href="styles.css?v=20260929-23">
+  <link rel="stylesheet" href="styles.css?v=20260929-24">
 </head>
 <body>
   <div class="app-shell">
@@ -88,12 +88,6 @@
               <label>Festival
                 <select id="eventFestivalFilter">
                   <option value="all">All Festivals</option>
-                  <option value="CNY">CNY</option>
-                  <option value="Hari Raya">Hari Raya</option>
-                  <option value="Mid-Autumn">Mid-Autumn</option>
-                  <option value="Diwali">Diwali</option>
-                  <option value="Christmas">Christmas</option>
-                  <option value="Other">Other</option>
                 </select>
               </label>
               <label>Status
@@ -160,9 +154,9 @@
     <form method="dialog" id="eventForm">
       <div class="dialog-header"><div><span class="eyebrow" id="eventDialogEyebrow">NEW CAMPAIGN</span><h2 id="eventDialogTitle">Create festival event</h2></div><button class="icon-button close-dialog" type="button" aria-label="Close">×</button></div>
       <div class="form-grid">
-        <label class="full">Event name<input name="name" required placeholder="e.g. Hari Raya Celebration"></label>
+        <label class="full">Event name<input name="name" required placeholder="e.g. CNY Celebration"></label>
         <label>Market<select name="market" id="eventMarketSelect" required><option value="MY">MY · Malaysia</option><option value="SG">SG · Singapore</option><option value="ID">ID · Indonesia</option><option value="TH">TH · Thailand</option><option value="MX">MX · Mexico</option></select></label>
-        <label>Festival<select name="festival" required><option>CNY</option><option>Christmas</option><option>Diwali</option><option>Hari Raya</option><option>Mid-Autumn</option><option>Other</option></select></label>
+        <label>Festival<select name="festival" id="eventFestivalSelect" required></select></label>
         <label>Status<select name="status"><option>Unplan</option><option>Planned</option><option>Completed</option></select></label>
         <label class="full">Festival date<input name="festivalDate" type="date" required></label>
         <label class="full"><span id="eventBudgetLabel">Budget (MYR)</span><input name="budget" type="number" min="0" step="0.01" required placeholder="10000"></label>
@@ -283,8 +277,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="shared-storage.js?v=20260929-23"></script>
-  <script src="app.js?v=20260929-23"></script>
-  <!-- deployment-sync-20260929-23 -->
+  <script src="shared-storage.js?v=20260929-24"></script>
+  <script src="app.js?v=20260929-24"></script>
+  <!-- deployment-sync-20260929-24 -->
 </body>
 </html>

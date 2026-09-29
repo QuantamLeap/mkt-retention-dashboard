@@ -747,6 +747,9 @@ function renderBulkPreview() {
     ? `<strong>${bulkImportRows.length} rows detected</strong><span>${validRows.length} ready to import · ${invalidRows.length} with errors</span>`
     : `<strong>No data loaded</strong><span>Upload the completed Excel or CSV template to preview it here.</span>`;
 
+  const selectedCampaign = eventById(document.querySelector("#bulkRewardEventSelect").value);
+  const selectedMarket = eventMarket(selectedCampaign);
+
   table.innerHTML = bulkImportRows.slice(0, 100).map(row => `
     <tr class="${row.errors.length ? "bulk-row-error" : ""}">
       <td>${row.rowNumber}</td>
@@ -754,7 +757,7 @@ function renderBulkPreview() {
       <td>${escapeHtml(row.type || "—")}</td>
       <td>${escapeHtml(row.description || "—")}</td>
       <td>${Number.isFinite(row.quantity) ? row.quantity : "—"}</td>
-      <td>${Number.isFinite(row.unitCost) ? money.format(row.unitCost) : "—"}</td>
+      <td>${Number.isFinite(row.unitCost) ? formatMoney(row.unitCost, selectedMarket) : "—"}</td>
       <td>${row.date ? formatDate(row.date) : "—"}</td>
       <td><span class="badge ${row.errors.length ? "cancelled" : "issued"}">${row.errors.length ? escapeHtml(row.errors.join("; ")) : "Ready"}</span></td>
     </tr>`).join("") || `<tr><td colspan="8" class="empty-state">Upload a file to preview reward records.</td></tr>`;
@@ -809,7 +812,7 @@ function downloadBulkRewardTemplate() {
     return;
   }
   const rows = [
-    ["Player ID", "Reward Type", "Reward Description", "Quantity", "Unit Cost (RM)", "Date Issued", "Status"],
+    ["Player ID", "Reward Type", "Reward Description", "Quantity", "Unit Cost", "Date Issued", "Status"],
     ["PL-1028", "Free Credit", "Festival bonus credits", 1, 50, today(), "Issued"]
   ];
   const sheet = XLSX.utils.aoa_to_sheet(rows);
@@ -868,6 +871,21 @@ function showToast(message) {
 }
 function openDialog(dialog) { dialog.showModal(); }
 
+function updateEventCurrencyLabel() {
+  const market = document.querySelector("#eventMarketSelect")?.value || "MY";
+  const label = document.querySelector("#eventBudgetLabel");
+  if (label) label.textContent = `Budget (${marketCurrency(market)})`;
+}
+
+function updateRewardCurrencyLabels() {
+  const select = document.querySelector("#rewardEventSelect");
+  const campaign = eventById(select?.value);
+  const market = eventMarket(campaign);
+  const label = document.querySelector("#rewardUnitCostLabel");
+  if (label) label.textContent = `Unit cost (${marketCurrency(market)})`;
+  updateCostPreview();
+}
+
 function setEventDialogMode(mode) {
   const isEditing = mode === "edit";
   document.querySelector("#eventDialogEyebrow").textContent = isEditing ? "EDIT CAMPAIGN" : "NEW CAMPAIGN";
@@ -878,7 +896,15 @@ function setEventDialogMode(mode) {
 
 function openCreateEventDialog() {
   editingEventId = null;
-  document.querySelector("#eventForm").reset();
+  const form = document.querySelector("#eventForm");
+  form.reset();
+  const preferredMarket = selectedEventMarket !== "all"
+    ? selectedEventMarket
+    : selectedOverviewMarket !== "all"
+      ? selectedOverviewMarket
+      : "MY";
+  form.elements.market.value = preferredMarket;
+  updateEventCurrencyLabel();
   setEventDialogMode("create");
   openDialog(document.querySelector("#eventDialog"));
 }
@@ -889,10 +915,12 @@ function openEditEventDialog(id) {
   editingEventId = id;
   const form = document.querySelector("#eventForm");
   form.elements.name.value = campaign.name;
+  form.elements.market.value = eventMarket(campaign);
   form.elements.festival.value = campaign.festival;
   form.elements.status.value = campaign.status;
   form.elements.festivalDate.value = campaign.festivalDate || "";
   form.elements.budget.value = campaign.budget;
+  updateEventCurrencyLabel();
   setEventDialogMode("edit");
   openDialog(document.querySelector("#eventDialog"));
 }
@@ -933,10 +961,29 @@ document.addEventListener("click", event => {
   const editEventButton = event.target.closest("[data-edit-event]");
   if (editEventButton) openEditEventDialog(editEventButton.dataset.editEvent);
 
+  const eventMarketButton = event.target.closest("[data-event-market]");
+  if (eventMarketButton) {
+    selectedEventMarket = eventMarketButton.dataset.eventMarket;
+    ensureSelectedEventYear();
+    renderEventGrid();
+  }
+
   const yearButton = event.target.closest("[data-event-year]");
   if (yearButton) {
     selectedEventYear = yearButton.dataset.eventYear;
     renderEventGrid();
+  }
+
+  const overviewMarketButton = event.target.closest("[data-overview-market]");
+  if (overviewMarketButton) {
+    selectedOverviewMarket = overviewMarketButton.dataset.overviewMarket;
+    ensureSelectedOverviewYear();
+    renderOverviewMarketTabs();
+    renderOverviewYearTabs();
+    renderMetrics();
+    renderCostChart();
+    renderRewardMix();
+    renderOverviewEvents();
   }
 
   const overviewYearButton = event.target.closest("[data-overview-year]");
@@ -955,7 +1002,8 @@ document.addEventListener("click", event => {
 
   if (event.target.closest("#openRewardButton, .open-reward")) {
     document.querySelector("#rewardForm [name=date]").value = today();
-    updateCostPreview();
+    renderSelects();
+    updateRewardCurrencyLabels();
     openDialog(document.querySelector("#rewardDialog"));
   }
 
@@ -972,9 +1020,12 @@ document.addEventListener("click", event => {
 });
 
 document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
-["searchInput", "eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "searchInput" ? "input" : "change", renderRewards));
+["searchInput", "rewardMarketFilter", "eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "searchInput" ? "input" : "change", renderRewards));
 ["eventFestivalFilter", "eventStatusFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener("change", renderEventGrid));
-["payoutSearchInput", "payoutEventFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "payoutSearchInput" ? "input" : "change", renderPayouts));
+["payoutSearchInput", "payoutMarketFilter", "payoutYearFilter", "payoutEventFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "payoutSearchInput" ? "input" : "change", renderPayouts));
+document.querySelector("#eventMarketSelect").addEventListener("change", updateEventCurrencyLabel);
+document.querySelector("#rewardEventSelect").addEventListener("change", updateRewardCurrencyLabels);
+document.querySelector("#bulkRewardEventSelect").addEventListener("change", renderBulkPreview);
 
 document.querySelector("#bulkRewardFile").addEventListener("change", event => loadBulkRewardFile(event.target.files?.[0]));
 document.querySelector("#confirmBulkImportButton").addEventListener("click", confirmBulkImport);
@@ -988,7 +1039,9 @@ document.querySelector("#eventForm").addEventListener("submit", event => {
   if (editingEventId) {
     const index = state.events.findIndex(campaign => campaign.id === editingEventId);
     if (index === -1) { showToast("Campaign could not be found"); return; }
-    state.events[index] = { ...state.events[index], ...values, budget: Number(values.budget) };
+    state.events[index] = { ...state.events[index], ...values, market: values.market || "MY", budget: Number(values.budget) };
+    selectedEventMarket = eventMarket(state.events[index]);
+    selectedOverviewMarket = eventMarket(state.events[index]);
     selectedEventYear = eventYear(state.events[index]) || selectedEventYear;
     selectedOverviewYear = eventYear(state.events[index]) || selectedOverviewYear;
     saveState();
@@ -998,8 +1051,10 @@ document.querySelector("#eventForm").addEventListener("submit", event => {
     return;
   }
 
-  const newEvent = { ...values, id: `evt-${Date.now()}`, budget: Number(values.budget) };
+  const newEvent = { ...values, id: `evt-${Date.now()}`, market: values.market || "MY", budget: Number(values.budget) };
   state.events.unshift(newEvent);
+  selectedEventMarket = eventMarket(newEvent);
+  selectedOverviewMarket = eventMarket(newEvent);
   selectedEventYear = eventYear(newEvent) || selectedEventYear;
   selectedOverviewYear = eventYear(newEvent) || selectedOverviewYear;
   saveState();
@@ -1017,7 +1072,13 @@ document.querySelector("#deleteEventButton").addEventListener("click", deleteEdi
 
 function updateCostPreview() {
   const form = document.querySelector("#rewardForm");
-  document.querySelector("#costPreview").textContent = money.format(Number(form.elements.quantity.value || 0) * Number(form.elements.unitCost.value || 0));
+  if (!form) return;
+  const campaign = eventById(form.elements.eventId?.value);
+  const market = eventMarket(campaign);
+  document.querySelector("#costPreview").textContent = formatMoney(
+    Number(form.elements.quantity.value || 0) * Number(form.elements.unitCost.value || 0),
+    market
+  );
 }
 document.querySelector("#rewardForm").addEventListener("input", updateCostPreview);
 document.querySelector("#rewardType").addEventListener("change", event => {
@@ -1035,11 +1096,15 @@ document.querySelector("#rewardForm").addEventListener("submit", event => {
 });
 
 document.querySelector("#exportButton").addEventListener("click", () => {
-  const headers = ["Record Type", "Player ID / Batch", "Event", "Type", "Description / Reference", "Quantity", "Amount (RM)", "Date", "Status", "Recorded By"];
-  const rewardRows = state.rewards.map(reward => [
-    "Reward / Paid out", reward.playerId, eventById(reward.eventId)?.name || "", reward.type, reward.description,
-    reward.quantity, rewardCost(reward), reward.date, reward.status, ""
-  ]);
+  const headers = ["Record Type", "Market", "Currency", "Player ID", "Event", "Type", "Description", "Quantity", "Amount", "Date", "Status"];
+  const rewardRows = state.rewards.map(reward => {
+    const campaign = eventById(reward.eventId);
+    const market = eventMarket(campaign);
+    return [
+      "Reward / Paid out", market, marketCurrency(market), reward.playerId, campaign?.name || "", reward.type, reward.description,
+      reward.quantity, rewardCost(reward), reward.date, reward.status
+    ];
+  });
   const csv = [headers, ...rewardRows].map(row => row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));

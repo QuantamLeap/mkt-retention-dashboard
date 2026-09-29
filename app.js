@@ -232,8 +232,17 @@ function ensureSelectedEventYear() {
   selectedEventYear = years.includes(currentYear) ? currentYear : years[0];
 }
 
+function yearsForMarket(market = "all") {
+  return [...new Set(
+    state.events
+      .filter(event => market === "all" || eventMarket(event) === market)
+      .map(eventYear)
+      .filter(Boolean)
+  )].sort((a, b) => Number(b) - Number(a));
+}
+
 function ensureSelectedOverviewYear() {
-  const years = availableEventYears();
+  const years = yearsForMarket(selectedOverviewMarket);
   if (!years.length) { selectedOverviewYear = "all"; return; }
   if (selectedOverviewYear === "all" || years.includes(String(selectedOverviewYear))) return;
   const currentYear = String(new Date().getFullYear());
@@ -242,7 +251,11 @@ function ensureSelectedOverviewYear() {
 
 function getOverviewEvents() {
   ensureSelectedOverviewYear();
-  return state.events.filter(event => selectedOverviewYear === "all" || eventYear(event) === String(selectedOverviewYear));
+  return state.events.filter(event => {
+    const marketMatch = selectedOverviewMarket === "all" || eventMarket(event) === selectedOverviewMarket;
+    const yearMatch = selectedOverviewYear === "all" || eventYear(event) === String(selectedOverviewYear);
+    return marketMatch && yearMatch;
+  });
 }
 
 function getOverviewRewards(events = getOverviewEvents()) {
@@ -250,20 +263,28 @@ function getOverviewRewards(events = getOverviewEvents()) {
   return state.rewards.filter(reward => ids.has(reward.eventId));
 }
 
+function renderOverviewMarketTabs() {
+  document.querySelector("#overviewMarketTabs").innerHTML = [
+    ...MARKET_CODES.map(market => `<button type="button" class="market-tab ${selectedOverviewMarket === market ? "active" : ""}" data-overview-market="${market}">${market}</button>`),
+    `<button type="button" class="market-tab ${selectedOverviewMarket === "all" ? "active" : ""}" data-overview-market="all">All Markets</button>`
+  ].join("");
+}
+
 function renderOverviewYearTabs() {
   ensureSelectedOverviewYear();
-  const years = availableEventYears();
+  const years = yearsForMarket(selectedOverviewMarket);
   document.querySelector("#overviewYearTabs").innerHTML = [
     ...years.map(year => `<button type="button" class="year-tab ${String(selectedOverviewYear) === year ? "active" : ""}" data-overview-year="${year}">${year}</button>`),
     `<button type="button" class="year-tab ${selectedOverviewYear === "all" ? "active" : ""}" data-overview-year="all">All Years</button>`
   ].join("");
 
-  document.querySelector("#overviewPeriodLabel").textContent = selectedOverviewYear === "all"
-    ? "All years campaign activity"
-    : `${selectedOverviewYear} campaign activity`;
+  const marketLabel = selectedOverviewMarket === "all" ? "All markets" : selectedOverviewMarket;
+  const yearLabel = selectedOverviewYear === "all" ? "all years" : selectedOverviewYear;
+  document.querySelector("#overviewPeriodLabel").textContent = `${marketLabel} · ${yearLabel} campaign activity`;
 }
 
 function render() {
+  renderOverviewMarketTabs();
   renderOverviewYearTabs();
   renderMetrics();
   renderCostChart();
@@ -278,12 +299,27 @@ function render() {
 function renderMetrics() {
   const events = getOverviewEvents();
   const rewards = getOverviewRewards(events);
-  const paid = rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
-  const recipients = new Set(rewards.map(reward => reward.playerId)).size;
   const planned = events.filter(event => event.status === "Planned").length;
-  const periodLabel = selectedOverviewYear === "all" ? "selected years" : selectedOverviewYear;
+  const recipients = new Set(rewards.map(reward => `${eventMarket(eventById(reward.eventId))}:${reward.playerId}`)).size;
+  const periodLabel = selectedOverviewYear === "all" ? "all years" : selectedOverviewYear;
+
+  let payoutValue;
+  let payoutDetail;
+  let payoutSymbol;
+  if (selectedOverviewMarket === "all") {
+    const marketsWithPayouts = MARKET_CODES.filter(market => rewards.some(reward => eventMarket(eventById(reward.eventId)) === market)).length;
+    payoutValue = `${marketsWithPayouts} market${marketsWithPayouts === 1 ? "" : "s"}`;
+    payoutDetail = "Currencies kept separate — see market breakdown";
+    payoutSymbol = "◎";
+  } else {
+    const paid = rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+    payoutValue = formatMoney(paid, selectedOverviewMarket);
+    payoutDetail = `${rewards.length} paid reward records in ${periodLabel}`;
+    payoutSymbol = marketCurrency(selectedOverviewMarket);
+  }
+
   const metrics = [
-    ["Actual payout", money.format(paid), `${rewards.length} paid reward records in ${periodLabel}`, "RM", "#28755a"],
+    ["Actual payout", payoutValue, payoutDetail, payoutSymbol, "#28755a"],
     ["Unique recipients", recipients.toLocaleString(), `Across ${events.length} festival event${events.length === 1 ? "" : "s"}`, "◎", "#3d6781"],
     ["Events tracked", events.length, `${planned} planned`, "◇", "#a56c19"]
   ];
@@ -293,17 +329,40 @@ function renderMetrics() {
 
 function renderCostChart() {
   const events = getOverviewEvents();
-  let values = [];
+  const chart = document.querySelector("#costChart");
+  const meta = document.querySelector("#averageCost");
 
+  if (selectedOverviewMarket === "all") {
+    const marketRows = MARKET_CODES.map(market => {
+      const marketEvents = events.filter(event => eventMarket(event) === market);
+      const ids = new Set(marketEvents.map(event => event.id));
+      const rewards = state.rewards.filter(reward => ids.has(reward.eventId));
+      const cost = rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
+      return { market, cost, events: marketEvents.length, records: rewards.length };
+    });
+
+    document.querySelector("#payoutChartEyebrow").textContent = "PAYOUT BY MARKET";
+    document.querySelector("#payoutChartTitle").textContent = selectedOverviewYear === "all" ? "Market payout summary" : `${selectedOverviewYear} market payout`;
+    meta.textContent = "Currencies shown separately";
+    chart.innerHTML = `<div class="market-payout-grid">${marketRows.map(row => `
+      <article class="market-payout-card">
+        <div><span class="market-pill">${row.market}</span><small>${MARKETS[row.market].name}</small></div>
+        <strong>${formatMoney(row.cost, row.market)}</strong>
+        <span>${row.events} event${row.events === 1 ? "" : "s"} · ${row.records} paid record${row.records === 1 ? "" : "s"}</span>
+      </article>`).join("")}</div>`;
+    return;
+  }
+
+  let values = [];
   if (selectedOverviewYear === "all") {
-    values = availableEventYears().slice().sort((a, b) => Number(a) - Number(b)).map(year => {
-      const yearEvents = state.events.filter(event => eventYear(event) === year);
+    values = yearsForMarket(selectedOverviewMarket).slice().sort((a, b) => Number(a) - Number(b)).map(year => {
+      const yearEvents = state.events.filter(event => eventMarket(event) === selectedOverviewMarket && eventYear(event) === year);
       const ids = new Set(yearEvents.map(event => event.id));
       const cost = state.rewards.filter(reward => ids.has(reward.eventId)).reduce((sum, reward) => sum + rewardCost(reward), 0);
       return { label: year, cost };
     });
     document.querySelector("#payoutChartEyebrow").textContent = "PAYOUT BY YEAR";
-    document.querySelector("#payoutChartTitle").textContent = "Annual payout";
+    document.querySelector("#payoutChartTitle").textContent = `${selectedOverviewMarket} annual payout`;
   } else {
     const festivalOrder = ["CNY", "Hari Raya", "Mid-Autumn", "Diwali", "Christmas", "Other"];
     const festivals = [...new Set(events.map(event => event.festival))].sort((a, b) => {
@@ -317,39 +376,47 @@ function renderCostChart() {
       return { label: festival, cost };
     });
     document.querySelector("#payoutChartEyebrow").textContent = "PAYOUT BY FESTIVAL";
-    document.querySelector("#payoutChartTitle").textContent = `${selectedOverviewYear} festival payout`;
+    document.querySelector("#payoutChartTitle").textContent = `${selectedOverviewMarket} · ${selectedOverviewYear} festival payout`;
   }
 
   const total = values.reduce((sum, item) => sum + item.cost, 0);
   const max = Math.max(...values.map(item => item.cost), 1);
-  document.querySelector("#averageCost").textContent = `Total ${money.format(total)}`;
-  document.querySelector("#costChart").innerHTML = values.length
+  meta.textContent = `Total ${formatMoney(total, selectedOverviewMarket)}`;
+  chart.innerHTML = values.length
     ? values.map(({ label, cost }) => `
-      <div class="bar-column" title="${escapeHtml(label)}: ${money.format(cost)}"><span class="bar-value">${money.format(cost)}</span><div class="bar" style="height:${Math.max((cost / max) * 150, 4)}px"></div><span class="bar-label">${escapeHtml(label)}</span></div>`).join("")
+      <div class="bar-column" title="${escapeHtml(label)}: ${formatMoney(cost, selectedOverviewMarket)}"><span class="bar-value">${formatMoney(cost, selectedOverviewMarket)}</span><div class="bar" style="height:${Math.max((cost / max) * 150, 4)}px"></div><span class="bar-label">${escapeHtml(label)}</span></div>`).join("")
     : `<div class="chart-empty-state">No payout data for this period.</div>`;
 }
 
 function renderRewardMix() {
   const rewards = getOverviewRewards();
+  if (selectedOverviewMarket === "all") {
+    document.querySelector("#rewardMix").innerHTML = `
+      <div class="mix-total"><strong>5 markets</strong><span>Amounts are not combined across currencies</span></div>
+      <div class="market-mix-note">Select MY, SG, ID, TH or MX to view the Free Credit vs Physical Gift payout mix in that market's currency.</div>`;
+    return;
+  }
+
   const total = rewards.reduce((sum, reward) => sum + rewardCost(reward), 0);
   const credit = rewards.filter(reward => reward.type === "Credit").reduce((sum, reward) => sum + rewardCost(reward), 0);
   const physical = total - credit;
   const creditPct = total ? Math.round(credit / total * 100) : 0;
   document.querySelector("#rewardMix").innerHTML = `
-    <div class="mix-total"><strong>${money.format(total)}</strong><span>Total paid out</span></div>
-    <div class="mix-row"><div class="mix-line"><span>Free credits</span><span>${creditPct}% · ${money.format(credit)}</span></div><div class="mix-track"><div class="mix-fill" style="width:${creditPct}%"></div></div></div>
-    <div class="mix-row"><div class="mix-line"><span>Physical gifts</span><span>${total ? 100 - creditPct : 0}% · ${money.format(physical)}</span></div><div class="mix-track"><div class="mix-fill physical" style="width:${total ? 100 - creditPct : 0}%"></div></div></div>`;
+    <div class="mix-total"><strong>${formatMoney(total, selectedOverviewMarket)}</strong><span>Total paid out · ${selectedOverviewMarket}</span></div>
+    <div class="mix-row"><div class="mix-line"><span>Free credits</span><span>${creditPct}% · ${formatMoney(credit, selectedOverviewMarket)}</span></div><div class="mix-track"><div class="mix-fill" style="width:${creditPct}%"></div></div></div>
+    <div class="mix-row"><div class="mix-line"><span>Physical gifts</span><span>${total ? 100 - creditPct : 0}% · ${formatMoney(physical, selectedOverviewMarket)}</span></div><div class="mix-track"><div class="mix-fill physical" style="width:${total ? 100 - creditPct : 0}%"></div></div></div>`;
 }
 
 function eventRow(event) {
-  return `<tr><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.festivalDate)}</td><td>${eventRecipients(event.id)}</td><td>${money.format(event.budget)}</td><td><strong>${money.format(eventPaidPayout(event.id))}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
+  const market = eventMarket(event);
+  return `<tr><td><span class="market-pill">${market}</span></td><td><strong>${escapeHtml(event.name)}</strong><small>${escapeHtml(event.festival)}</small></td><td>${formatDate(event.festivalDate)}</td><td>${eventRecipients(event.id)}</td><td>${formatMoney(event.budget, market)}</td><td><strong>${formatMoney(eventPaidPayout(event.id), market)}</strong></td><td><span class="badge ${event.status.toLowerCase()}">${event.status}</span></td></tr>`;
 }
 
 function renderOverviewEvents() {
   const events = getOverviewEvents()
     .slice()
     .sort((a, b) => String(b.festivalDate || "").localeCompare(String(a.festivalDate || "")));
-  document.querySelector("#overviewEvents").innerHTML = events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="6" class="empty-state">No events for this period.</td></tr>`;
+  document.querySelector("#overviewEvents").innerHTML = events.slice(0, 5).map(eventRow).join("") || `<tr><td colspan="7" class="empty-state">No events for this period.</td></tr>`;
 }
 
 function renderEventGrid() {

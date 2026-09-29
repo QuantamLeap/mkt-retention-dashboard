@@ -607,8 +607,11 @@ function renderPayouts() {
       && (yearFilter === "all" || eventYear(campaign) === yearFilter);
   });
 
+  const payoutSummary = document.querySelector("#payoutSummary");
+  payoutSummary.classList.toggle("market-mode", marketFilter === "all");
+
   if (marketFilter === "all") {
-    document.querySelector("#payoutSummary").innerHTML = MARKET_CODES.map(market => {
+    payoutSummary.innerHTML = MARKET_CODES.map(market => {
       const records = scopedRecords.filter(payout => eventMarket(eventById(payout.eventId)) === market);
       const total = records.reduce((sum, payout) => sum + payoutAmount(payout), 0);
       const campaigns = new Set(records.map(payout => payout.eventId)).size;
@@ -621,7 +624,7 @@ function renderPayouts() {
   } else {
     const paidTotal = scopedRecords.reduce((sum, payout) => sum + payoutAmount(payout), 0);
     const campaignCount = new Set(scopedRecords.map(payout => payout.eventId)).size;
-    document.querySelector("#payoutSummary").innerHTML = [
+    payoutSummary.innerHTML = [
       ["Actual payout", formatMoney(paidTotal, marketFilter), `${marketFilter} · ${MARKETS[marketFilter].name}`],
       ["Paid records", scopedRecords.length.toLocaleString(), "Automatically created from rewards"],
       ["Campaigns", campaignCount.toLocaleString(), "With paid reward records"]

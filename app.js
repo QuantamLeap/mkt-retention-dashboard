@@ -474,32 +474,41 @@ function renderSelects() {
     const marketCompare = eventMarket(a).localeCompare(eventMarket(b));
     return marketCompare || String(a.festivalDate || "").localeCompare(String(b.festivalDate || ""));
   });
-  const options = sortedEvents.map(event => `<option value="${event.id}">[${eventMarket(event)}] ${escapeHtml(event.name)}</option>`).join("");
+  const optionFor = event => `<option value="${event.id}">[${eventMarket(event)}] ${escapeHtml(event.name)}</option>`;
+  const allOptions = sortedEvents.map(optionFor).join("");
 
+  const rewardMarket = document.querySelector("#rewardMarketFilter")?.value || "all";
+  const rewardEvents = sortedEvents.filter(event => rewardMarket === "all" || eventMarket(event) === rewardMarket);
   const eventFilter = document.querySelector("#eventFilter");
   const currentRewardFilter = eventFilter.value;
-  eventFilter.innerHTML = `<option value="all">All events</option>${options}`;
-  if (["all", ...state.events.map(event => event.id)].includes(currentRewardFilter)) eventFilter.value = currentRewardFilter;
+  eventFilter.innerHTML = `<option value="all">All events</option>${rewardEvents.map(optionFor).join("")}`;
+  eventFilter.value = rewardEvents.some(event => event.id === currentRewardFilter) ? currentRewardFilter : "all";
 
-  const payoutEventFilter = document.querySelector("#payoutEventFilter");
-  const currentPayoutFilter = payoutEventFilter.value;
-  payoutEventFilter.innerHTML = `<option value="all">All campaigns</option>${options}`;
-  if (["all", ...state.events.map(event => event.id)].includes(currentPayoutFilter)) payoutEventFilter.value = currentPayoutFilter;
-
+  const payoutMarket = document.querySelector("#payoutMarketFilter")?.value || "all";
   const payoutYearFilter = document.querySelector("#payoutYearFilter");
   const currentYear = payoutYearFilter.value;
-  const years = availableEventYears();
+  const years = yearsForMarket(payoutMarket);
   payoutYearFilter.innerHTML = `<option value="all">All years</option>${years.map(year => `<option value="${year}">${year}</option>`).join("")}`;
-  if (["all", ...years].includes(currentYear)) payoutYearFilter.value = currentYear;
+  payoutYearFilter.value = ["all", ...years].includes(currentYear) ? currentYear : "all";
+
+  const payoutYear = payoutYearFilter.value;
+  const payoutEvents = sortedEvents.filter(event =>
+    (payoutMarket === "all" || eventMarket(event) === payoutMarket)
+    && (payoutYear === "all" || eventYear(event) === payoutYear)
+  );
+  const payoutEventFilter = document.querySelector("#payoutEventFilter");
+  const currentPayoutFilter = payoutEventFilter.value;
+  payoutEventFilter.innerHTML = `<option value="all">All campaigns</option>${payoutEvents.map(optionFor).join("")}`;
+  payoutEventFilter.value = payoutEvents.some(event => event.id === currentPayoutFilter) ? currentPayoutFilter : "all";
 
   const rewardEventSelect = document.querySelector("#rewardEventSelect");
   const currentRewardEvent = rewardEventSelect.value;
-  rewardEventSelect.innerHTML = options;
+  rewardEventSelect.innerHTML = allOptions;
   if (state.events.some(event => event.id === currentRewardEvent)) rewardEventSelect.value = currentRewardEvent;
 
   const bulkRewardEventSelect = document.querySelector("#bulkRewardEventSelect");
   const currentBulkEvent = bulkRewardEventSelect.value;
-  bulkRewardEventSelect.innerHTML = options;
+  bulkRewardEventSelect.innerHTML = allOptions;
   if (state.events.some(event => event.id === currentBulkEvent)) bulkRewardEventSelect.value = currentBulkEvent;
 
   updateRewardCurrencyLabels();
@@ -1022,9 +1031,14 @@ document.addEventListener("click", event => {
 });
 
 document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
-["searchInput", "rewardMarketFilter", "eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "searchInput" ? "input" : "change", renderRewards));
+document.querySelector("#searchInput").addEventListener("input", renderRewards);
+document.querySelector("#rewardMarketFilter").addEventListener("change", () => { renderSelects(); renderRewards(); });
+["eventFilter", "typeFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener("change", renderRewards));
 ["eventFestivalFilter", "eventStatusFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener("change", renderEventGrid));
-["payoutSearchInput", "payoutMarketFilter", "payoutYearFilter", "payoutEventFilter"].forEach(id => document.querySelector(`#${id}`).addEventListener(id === "payoutSearchInput" ? "input" : "change", renderPayouts));
+document.querySelector("#payoutSearchInput").addEventListener("input", renderPayouts);
+document.querySelector("#payoutMarketFilter").addEventListener("change", () => { renderSelects(); renderPayouts(); });
+document.querySelector("#payoutYearFilter").addEventListener("change", () => { renderSelects(); renderPayouts(); });
+document.querySelector("#payoutEventFilter").addEventListener("change", renderPayouts);
 document.querySelector("#eventMarketSelect").addEventListener("change", updateEventCurrencyLabel);
 document.querySelector("#rewardEventSelect").addEventListener("change", updateRewardCurrencyLabels);
 document.querySelector("#bulkRewardEventSelect").addEventListener("change", renderBulkPreview);

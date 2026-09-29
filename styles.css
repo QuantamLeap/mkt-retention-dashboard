@@ -209,3 +209,12 @@ dialog form { padding: 24px; }.dialog-header { display: flex; justify-content: s
   .event-filter-controls { flex-direction: column; }
   .year-tab { flex: 1 0 auto; }
 }
+
+.overview-period-control { display: grid; gap: 4px; }
+.overview-period-control > strong { margin-bottom: 6px; }
+.overview-year-tabs { margin: 0; }
+.chart-empty-state { width: 100%; min-height: 180px; display: grid; place-items: center; color: var(--muted); font-size: 11px; }
+@media (max-width: 760px) {
+  .overview-period-row { align-items: flex-end; }
+  .overview-year-tabs { max-width: calc(100vw - 110px); }
+}

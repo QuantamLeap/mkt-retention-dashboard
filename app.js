@@ -675,6 +675,64 @@ function renderPayouts() {
     ].map(([label, value, detail]) => `<article class="payout-summary-card"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join("");
   }
 
+  const topRecipientsPanel = document.querySelector("#topRecipientsPanel");
+  const topRecipientsChart = document.querySelector("#topRecipientsChart");
+  const topRecipientsMeta = document.querySelector("#topRecipientsMeta");
+
+  if (marketFilter === "all") {
+    topRecipientsPanel.classList.add("top-recipients-disabled");
+    topRecipientsMeta.textContent = "Select one market";
+    topRecipientsChart.innerHTML = `
+      <div class="top-recipients-empty">
+        <strong>Select a market to rank recipients</strong>
+        <span>Recipient totals are not compared across different currencies.</span>
+      </div>`;
+  } else {
+    topRecipientsPanel.classList.remove("top-recipients-disabled");
+
+    const recipientMap = new Map();
+    filtered.forEach(payout => {
+      const playerId = String(payout.playerBatch || "Unknown");
+      const current = recipientMap.get(playerId) || { playerId, total: 0, rewards: 0 };
+      current.total += payoutAmount(payout);
+      current.rewards += 1;
+      recipientMap.set(playerId, current);
+    });
+
+    const recipients = [...recipientMap.values()]
+      .sort((a, b) => b.total - a.total || b.rewards - a.rewards || a.playerId.localeCompare(b.playerId))
+      .slice(0, 10);
+
+    topRecipientsMeta.textContent = recipients.length
+      ? `Top ${recipients.length} · ${marketFilter} · ${MARKETS[marketFilter].name}`
+      : `${marketFilter} · No matching recipients`;
+
+    if (!recipients.length) {
+      topRecipientsChart.innerHTML = `
+        <div class="top-recipients-empty">
+          <strong>No recipient data for these filters</strong>
+          <span>Change the year, campaign, or search to view recipients.</span>
+        </div>`;
+    } else {
+      const maxTotal = Math.max(...recipients.map(recipient => recipient.total), 1);
+      topRecipientsChart.innerHTML = recipients.map((recipient, index) => {
+        const width = Math.max((recipient.total / maxTotal) * 100, 3);
+        return `
+          <div class="recipient-rank-row">
+            <span class="recipient-rank">${index + 1}</span>
+            <div class="recipient-info">
+              <div class="recipient-line">
+                <strong>${escapeHtml(recipient.playerId)}</strong>
+                <span>${formatMoney(recipient.total, marketFilter)}</span>
+              </div>
+              <div class="recipient-bar-track"><div class="recipient-bar-fill" style="width:${width}%"></div></div>
+              <small>${recipient.rewards} reward${recipient.rewards === 1 ? "" : "s"}</small>
+            </div>
+          </div>`;
+      }).join("");
+    }
+  }
+
   document.querySelector("#payoutTable").innerHTML = filtered.map((payout, index) => {
     const campaign = eventById(payout.eventId);
     const market = eventMarket(campaign);
